@@ -1,0 +1,2439 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+<title>Navegación App · Trainingym</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#1a1a1c; --side:#161618; --side-border:#2a2a2e;
+    --txt:#f4f4f6; --txt-dim:#8e8e93;
+    --accent:#ED6845; --accent-soft:rgba(237,104,69,.15);
+    --nav-h:72px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;background:var(--bg);color:var(--txt);font-family:'Poppins',system-ui,-apple-system,Segoe UI,sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden}
+
+  .app{display:grid;grid-template-columns:320px minmax(0,1fr);height:100vh;transition:grid-template-columns .28s ease}
+  .app.collapsed{grid-template-columns:0 minmax(0,1fr)}
+
+  .sidebar{background:var(--side);border-right:1px solid var(--side-border);overflow-y:auto;overflow-x:hidden;transition:transform .28s ease,opacity .2s ease}
+  .app.collapsed .sidebar{transform:translateX(-12px);opacity:0;pointer-events:none}
+  .sidebar-head{padding:22px 20px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--side-border)}
+  .logo-dot{width:22px;height:22px;border-radius:50%;background:conic-gradient(from 220deg,var(--accent) 0 75%,transparent 75% 100%);box-shadow:inset 0 0 0 3px var(--side)}
+  .sidebar-head h1{font-size:14px;font-weight:600;margin:0}
+  .sidebar-head h1 span{display:block;font-weight:400;color:var(--txt-dim);font-size:11px;letter-spacing:.5px;text-transform:uppercase;margin-top:2px}
+
+  .nav-group{padding:14px 12px}
+  .nav-group h2{font-size:10.5px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--txt-dim);margin:6px 10px 8px}
+  /* Cabecera de proyecto: separador visual entre secciones */
+  .nav-group h2.proj{margin-top:20px;padding-top:14px;border-top:1px solid var(--side-border);color:var(--accent);font-size:11px}
+  .nav-item{display:flex;align-items:center;gap:10px;width:100%;padding:9px 12px;margin:2px 0;background:transparent;border:0;color:var(--txt);font:500 13.5px/1.2 'Poppins',system-ui,sans-serif;border-radius:10px;cursor:pointer;text-align:left;transition:background .15s ease,color .15s ease;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .nav-item:hover{background:#202024}
+  /* Estado activo: rojo intenso para localizar fácilmente la página actual del flow */
+  .nav-item.active{background:rgba(232,57,57,.12);color:#e83939;box-shadow:inset 3px 0 0 #e83939}
+  .nav-item .num{min-width:42px;padding:0 6px;height:22px;border-radius:6px;display:grid;place-items:center;background:#26262a;color:var(--txt-dim);font-size:10.5px;font-weight:600;flex-shrink:0;letter-spacing:.2px;font-variant-numeric:tabular-nums}
+  .nav-item.active .num{background:#e83939;color:#fff}
+  .nav-sub{margin-left:14px;padding-left:10px;border-left:1px solid #2a2a2e}
+  .nav-sub .nav-item{font-size:12.5px;padding:7px 10px}
+
+  /* === Menús contraíbles === */
+  .nav-group h2.collapsible{cursor:pointer;user-select:none;display:flex;align-items:center;gap:8px;transition:color .15s ease}
+  .nav-group h2.collapsible:hover{color:#fff}
+  .nav-group h3{font-size:10.5px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--accent);margin:14px 10px 6px;display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none}
+  .nav-group h3:hover{filter:brightness(1.15)}
+  .chev{display:inline-block;width:0;height:0;border-left:4.5px solid transparent;border-right:4.5px solid transparent;border-top:5px solid currentColor;transition:transform .2s ease;opacity:.7;flex-shrink:0}
+  h2.collapsible.collapsed .chev,
+  h3.collapsible.collapsed .chev{transform:rotate(-90deg)}
+  h2.collapsible.collapsed + .nav-section{display:none}
+  h3.collapsible.collapsed + .nav-sub{display:none}
+
+  .nav-item.parent{font-weight:600}
+  .nav-item .caret{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:4px;cursor:pointer;flex-shrink:0;transition:background .15s ease;margin-right:-2px}
+  .nav-item .caret:hover{background:rgba(255,255,255,.06)}
+  .nav-item .caret::before{content:'';display:block;width:0;height:0;border-left:4.5px solid transparent;border-right:4.5px solid transparent;border-top:5px solid currentColor;opacity:.85;transition:transform .2s ease}
+  .nav-item.parent.collapsed .caret::before{transform:rotate(-90deg)}
+  .nav-item.parent.collapsed + .nav-children{display:none}
+  .nav-children{margin:4px 0 10px 14px;padding-left:8px;border-left:1px dashed #2a2a2e}
+
+  .stage{position:relative;display:grid;place-items:center;background:radial-gradient(120% 80% at 50% 0%,#26262c 0%,#1a1a1c 60%);overflow:hidden;min-width:0}
+  .toggle{position:absolute;top:16px;left:16px;width:38px;height:38px;border-radius:10px;background:#26262c;border:1px solid #2f2f35;color:var(--txt);display:grid;place-items:center;cursor:pointer;z-index:5}
+  .toggle:hover{background:#2f2f35}
+  .toggle svg{width:18px;height:18px}
+
+  /* El wrap toma el tamaño REAL escalado (no el base), así centrarlo en el grid funciona
+     bien en cualquier viewport sin recortes arriba/abajo. */
+  .iphone-wrap{
+    width:calc(400px * var(--phone-scale, 1));
+    height:calc(850px * var(--phone-scale, 1));
+    flex-shrink:0;
+    transition:width .15s ease,height .15s ease;
+  }
+  .iphone{
+    width:400px;height:850px;
+    transform:scale(var(--phone-scale, 1));
+    transform-origin:top left;
+    background:#0b0b0d;border-radius:54px;padding:13px;position:relative;
+    box-shadow:0 0 0 1px #2a2a2c inset,0 0 0 4px #1c1c1e,0 30px 70px -20px rgba(0,0,0,.85),0 12px 30px -10px rgba(0,0,0,.6);
+  }
+  .iphone .btn{position:absolute;background:#1d1d1f;border-radius:2px;width:3px}
+  .iphone .b-action{left:-3px;top:120px;height:30px}
+  .iphone .b-vol-up{left:-3px;top:170px;height:54px}
+  .iphone .b-vol-dn{left:-3px;top:240px;height:54px}
+  .iphone .b-power{right:-3px;top:200px;height:90px}
+
+  .screen{position:relative;width:100%;height:100%;background:#fff;border-radius:42px;overflow:hidden}
+  .island{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:118px;height:34px;background:#000;border-radius:20px;z-index:3}
+
+  .views{position:absolute;left:0;right:0;top:0;bottom:var(--nav-h)}
+  .view{position:absolute;inset:0;overflow-y:scroll;overflow-x:hidden;-webkit-overflow-scrolling:touch;opacity:0;pointer-events:none;transition:opacity .25s ease}
+  .view::-webkit-scrollbar{width:2px}
+  .view::-webkit-scrollbar-track{background:transparent}
+  .view::-webkit-scrollbar-thumb{background:rgba(0,0,0,.06);border-radius:2px}
+  .view:hover::-webkit-scrollbar-thumb{background:rgba(0,0,0,.18)}
+  .view.active{opacity:1;pointer-events:auto}
+
+  /* Wrapper relative; la altura se fija via JS tras cargar la imagen */
+  .scroll-img{position:relative;display:block;width:100%}
+  .scroll-img > img.bg{display:block;width:100%;height:auto;user-select:none;-webkit-user-drag:none}
+
+  /* Card overlay clickeable: replica visualmente la card del fondo
+     y al hover se eleva (translateY + sombra) */
+  .card-tap{
+    position:absolute;
+    cursor:pointer;
+    border-radius:18px;
+    overflow:hidden;
+    transition:transform .25s cubic-bezier(.2,.8,.2,1),box-shadow .25s ease;
+    box-shadow:0 0 0 0 rgba(0,0,0,0);
+  }
+  .card-tap > img{display:block;width:100%;height:100%;object-fit:cover;border-radius:18px}
+  .card-tap:hover{
+    transform:translateY(-6px) scale(1.015);
+    box-shadow:0 14px 30px -8px rgba(0,0,0,.35), 0 6px 12px -4px rgba(0,0,0,.2);
+  }
+  .card-tap:active{transform:translateY(-2px) scale(1.005)}
+
+  /* Hotspot invisible: clickable pero sin efecto visual */
+  .tap-zone{position:absolute;cursor:pointer;background:transparent;border:0;padding:0;margin:0;z-index:20}
+
+  /* Vistas principales (tabs del bottom nav): empujan el contenido un poco
+     hacia abajo para que cabeceras y avatares no queden tapados por el
+     Dynamic Island (DI top:11 height:34). */
+  .view[data-id="hoy"] .scroll-img,
+  .view[data-id="centro"] .scroll-img,
+  .view[data-id="perfil"] .scroll-img{margin-top:48px}
+
+  /* Asistente p4 (Hito 1 · Reserva) y p8 (Hito 2 · Calendario): tienen header
+     blanco con título "Define tus objetivos" / "Revisa tu plan" al top, que
+     quedaba tapado por el Dynamic Island. Se empuja la imagen 48px hacia abajo. */
+  #flow-asistente .flow-page.scroll[data-page="4"] .scroll-img,
+  #flow-asistente .flow-page.scroll[data-page="8"] .scroll-img{margin-top:48px}
+
+  /* Menú Más: la parte superior está atenuada (perfil dimmed), no necesita
+     margen para el DI. Disable scroll para que se vea entera la bottom-sheet
+     incluida la opción "Gymder®" abajo. */
+  .view[data-id="mas"]{overflow-y:hidden}
+  .view[data-id="mas"] .scroll-img{margin-top:0}
+
+  /* (Reglas per-flow para .flow-back eliminadas: el diseño unificado arriba
+     hace que el overlay sea invisible por defecto en todos los flujos, salvo
+     gymder p1 donde se muestra como botón circular oscuro). */
+
+  /* Gymder p1 (home): el contenido superior (avatar Mirko + barra de búsqueda)
+     queda tapado por el Dynamic Island. Empujamos la imagen 48px hacia abajo
+     y pintamos el strip superior del color del fondo del header (dark purple
+     que coincide con el degradado del header de gymder home). */
+  #flow-gymder .flow-page[data-page="1"] .scroll-img{margin-top:48px}
+  #flow-gymder .flow-page[data-page="1"]{background:#201836}
+
+  /* === Entrenamiento p1 (bottom-sheet con fondo dinámico) === */
+  #entrenamiento-p1{background:#000}
+  #entrenamiento-p1 .ent-p1-bg{
+    position:absolute;inset:0;
+    background-size:cover;
+    background-position:top center;
+    background-repeat:no-repeat;
+    z-index:0;
+  }
+  #entrenamiento-p1 .ent-p1-dim{
+    position:absolute;inset:0;
+    background:rgba(0,0,0,.55);
+    z-index:1;
+  }
+  #entrenamiento-p1 .ent-p1-sheet{
+    position:absolute;left:0;right:0;bottom:0;
+    height:32.5%; /* el panel blanco empieza en 67.59% de b1.jpg → mostramos 32.41% inferior */
+    overflow:hidden;
+    z-index:2;
+  }
+  #entrenamiento-p1 .ent-p1-sheet > img{
+    position:absolute;bottom:0;left:0;
+    width:100%;height:auto;
+    display:block;
+  }
+
+  /* === Dieta interactiva === */
+  /* Toggle redondo encima del marcador naranja baked-in. Click cambia estado. */
+  .dieta-tog{
+    position:absolute;
+    transform:translate(-50%,-50%);
+    background:#ED6845;
+    border:0;
+    border-radius:50%;
+    cursor:pointer;
+    z-index:25;
+    padding:0;
+    box-shadow:0 1px 3px rgba(0,0,0,.18);
+    transition:background .15s ease,box-shadow .15s ease;
+  }
+  .dieta-tog:hover{box-shadow:0 2px 6px rgba(0,0,0,.28)}
+  .dieta-tog.off{background:#cfcfd2;box-shadow:0 1px 2px rgba(0,0,0,.1) inset}
+  /* Capa que atenúa la card cuando el toggle está OFF (suelta sensación de "desactivado") */
+  .dieta-meal-dim{
+    position:absolute;
+    background:rgba(255,255,255,.55);
+    pointer-events:none;
+    opacity:0;
+    border-radius:14px;
+    transition:opacity .2s ease;
+    z-index:6;
+  }
+  .dieta-meal-dim.show{opacity:1}
+  /* Contador dinámico de Kcal — cubre el "2500 Kcal." baked-in */
+  .dieta-counter{
+    position:absolute;
+    left:0;right:0;
+    background:#fff;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font:600 30px/1 'Poppins',-apple-system,system-ui,sans-serif;
+    color:#1d1d1f;
+    z-index:8;
+    pointer-events:none;
+    letter-spacing:-.4px;
+  }
+  .dieta-counter span{font-weight:700}
+
+  /* Radio button overlay para cuestionarios interactivos */
+  .q-radio{
+    position:absolute;
+    width:5%;
+    aspect-ratio:1;
+    border-radius:50%;
+    border:2px solid #ED6845;
+    background:#fff;
+    cursor:pointer;
+    box-sizing:border-box;
+    z-index:25;
+    transform:translate(-50%, -50%);
+    display:grid;
+    place-items:center;
+    padding:0;
+    transition:transform .15s ease;
+  }
+  .q-radio:hover{transform:translate(-50%, -50%) scale(1.1)}
+  .q-radio:active{transform:translate(-50%, -50%) scale(.95)}
+  .q-radio::after{
+    content:'';
+    width:55%;
+    height:55%;
+    border-radius:50%;
+    background:#ED6845;
+    opacity:0;
+    transition:opacity .12s ease;
+  }
+  .q-radio.checked::after{opacity:1}
+
+  .bottomnav{
+    position:absolute;left:0;right:0;bottom:0;
+    height:var(--nav-h);
+    background:#fff;
+    display:flex;align-items:center;justify-content:space-around;
+    padding:6px 4px 10px;
+    border-top:1px solid #f0f0f0;
+    z-index:2;
+  }
+  .tg-tab{
+    flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+    background:transparent;border:0;padding:6px 4px;cursor:pointer;
+    color:#1d1d1f;font:500 11px/1 'Poppins',system-ui,sans-serif;
+    transition:color .15s ease;
+  }
+  .tg-tab svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .tg-tab.active{color:var(--accent)}
+  .tg-tab.active svg{stroke:var(--accent)}
+  .tg-tab span{font-size:10.5px;letter-spacing:.1px;font-weight:500}
+  .tg-tab.active span{font-weight:600}
+
+  .screen.flow-mode .bottomnav{display:none}
+  .screen.flow-mode .views{bottom:0}
+
+  .flow{position:absolute;inset:0;background:#fff;overflow:hidden}
+  .flow-page{position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity .2s ease}
+  .flow-page.active{opacity:1;pointer-events:auto}
+  .flow-page > img{display:block;width:100%;height:100%;object-fit:cover;object-position:top center;user-select:none;-webkit-user-drag:none}
+  /* Variante con scroll: el contenido es más alto que la pantalla y permite scroll vertical */
+  .flow-page.scroll{overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+  .flow-page.scroll::-webkit-scrollbar{width:2px}
+  .flow-page.scroll::-webkit-scrollbar-thumb{background:rgba(0,0,0,.18);border-radius:2px}
+  .flow-page.scroll > .scroll-img > img.bg{height:auto}
+
+  /* Variante con CTA naranja FIJO abajo (footer pegado mientras la lista scrollea) */
+  .flow-page.with-cta{overflow:hidden;padding-bottom:0}
+  .flow-page.with-cta .scroll-wrap{
+    position:absolute;left:0;right:0;top:0;bottom:72px;
+    overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;
+  }
+  .flow-page.with-cta .scroll-wrap::-webkit-scrollbar{width:2px}
+  .flow-page.with-cta .scroll-wrap::-webkit-scrollbar-thumb{background:rgba(0,0,0,.18);border-radius:2px}
+  .cta-bar{
+    position:absolute;left:0;right:0;bottom:0;
+    height:72px;
+    background:#fff;
+    display:flex;align-items:center;justify-content:center;
+    padding:0 14px;
+    box-shadow:0 -6px 16px rgba(0,0,0,.05);
+    z-index:30;
+  }
+  .cta-bar .btn-cta{
+    width:100%;height:46px;
+    border:0;border-radius:30px;
+    background:var(--accent);color:#fff;
+    font:600 14.5px/1 'Poppins',system-ui,-apple-system,Segoe UI,sans-serif;
+    cursor:pointer;letter-spacing:.1px;
+    transition:opacity .15s ease,transform .15s ease;
+  }
+  .cta-bar .btn-cta:hover{opacity:.94}
+  .cta-bar .btn-cta:active{transform:scale(.99)}
+
+  /* DISEÑO UNIFICADO BACK ARROW: el `<` visible siempre es el que viene
+     baked-in en cada captura. El .flow-back es una zona invisible 96×96
+     en la esquina sup-izda que captura el click sobre la flecha visual.
+     Las tap-zones page-específicas (z-index:20) ganan a .flow-back (z-index:3),
+     así que la navegación intra-flujo (p2→p1) sigue funcionando.
+     Para áreas sin tap-zone propia, .flow-back lleva al origen (lastTab). */
+  .flow-back{
+    position:absolute;
+    top:0;left:0;
+    width:96px;height:96px;
+    border:0;cursor:pointer;
+    background:transparent;
+    z-index:3;
+    padding:0;
+  }
+  .flow-back svg{display:none}
+
+  /* Único caso especial: gymder p1 (Mirko home) NO tiene flecha back en la
+     imagen, así que mostramos el botón circular como referencia visual. */
+  #flow-gymder:has(.flow-page[data-page="1"].active) .flow-back{
+    top:14px;left:12px;
+    width:38px;height:38px;
+    border-radius:50%;
+    background:rgba(20,20,22,.55);
+    color:#fff;
+    display:grid;
+    place-items:center;
+  }
+  #flow-gymder:has(.flow-page[data-page="1"].active) .flow-back:hover{background:rgba(20,20,22,.85)}
+  #flow-gymder:has(.flow-page[data-page="1"].active) .flow-back svg{
+    display:block;width:18px;height:18px;
+    fill:none;stroke:currentColor;stroke-width:2.2;
+    stroke-linecap:round;stroke-linejoin:round;
+  }
+
+  .sidebar{scrollbar-width:thin;scrollbar-color:#3a3a3e transparent}
+  .sidebar::-webkit-scrollbar{width:6px}
+  .sidebar::-webkit-scrollbar-thumb{background:#3a3a3e;border-radius:3px}
+
+  /* Pantallas medianas (laptops 14-15") — sidebar más compacta pero sigue ancha */
+  @media (max-width:1366px){
+    .app{grid-template-columns:300px minmax(0,1fr)}
+    .sidebar-head{padding:18px 16px 12px}
+    .nav-group{padding:10px 8px}
+    .nav-item{padding:8px 10px;font-size:13px}
+  }
+  /* Laptops pequeños 13" */
+  @media (max-width:1200px){
+    .app{grid-template-columns:280px minmax(0,1fr)}
+    .nav-item{padding:7px 9px;font-size:12.5px;gap:8px}
+    .nav-item .num{min-width:30px;height:20px;font-size:10px;padding:0 4px}
+    .nav-sub .nav-item{font-size:12px;padding:6px 8px}
+    .nav-children{margin-left:10px;padding-left:6px}
+    .nav-sub{margin-left:10px;padding-left:8px}
+  }
+  /* Móvil/tablet — sidebar overlay */
+  @media (max-width:900px){
+    .app{grid-template-columns:0 minmax(0,1fr)}
+    .sidebar{position:absolute;left:0;top:0;bottom:0;width:300px;z-index:10}
+    .app.collapsed .sidebar{transform:translateX(-100%)}
+  }
+</style>
+</head>
+<body>
+<div class="app collapsed" id="app">
+  <aside class="sidebar">
+    <div class="sidebar-head">
+      <div class="logo-dot"></div>
+      <h1>Trainingym<span>Navegación App</span></h1>
+    </div>
+
+    <nav class="nav-group">
+      <!-- 4 menús principales: Hoy tienes / Mi centro / Mi perfil / Más
+           Cada uno es parent con sus sub-flujos colgando. -->
+      <div class="nav-section">
+
+        <!-- Hoy tienes (parent contraíble — contiene los 7 sub-flujos del Home) -->
+        <button class="nav-item parent active collapsed" data-target="hoy">
+          <span class="caret" data-toggle-children></span>
+          <span class="num">1</span>Hoy tienes
+        </button>
+
+        <div class="nav-children">
+
+          <!-- Sub-flujo 1.1 · Asistente virtual -->
+          <h3 class="collapsible"><span class="chev"></span>1.1 · Asistente virtual</h3>
+          <div class="nav-sub">
+            <button class="nav-item" data-target="asistente" data-page="1"><span class="num">1.1.1</span>Intro</button>
+            <button class="nav-item" data-target="asistente" data-page="2"><span class="num">1.1.2</span>Cuestionario inicial</button>
+            <button class="nav-item" data-target="asistente" data-page="3"><span class="num">1.1.3</span>Tu guía paso a paso</button>
+            <button class="nav-item" data-target="asistente" data-page="4"><span class="num">1.1.4</span>Hito 1 · Reserva</button>
+            <button class="nav-item" data-target="asistente" data-page="5"><span class="num">1.1.5</span>Hito 1 · Confirmación</button>
+            <button class="nav-item" data-target="asistente" data-page="6"><span class="num">1.1.6</span>Hito 1 · Enhorabuena</button>
+            <button class="nav-item" data-target="asistente" data-page="7"><span class="num">1.1.7</span>Guía · Hito 1 hecho</button>
+            <button class="nav-item" data-target="asistente" data-page="8"><span class="num">1.1.8</span>Hito 2 · Calendario</button>
+            <button class="nav-item" data-target="asistente" data-page="9"><span class="num">1.1.9</span>Hito 2 · Confirmación</button>
+            <button class="nav-item" data-target="asistente" data-page="10"><span class="num">1.1.10</span>Hito 2 · Enhorabuena</button>
+          </div>
+
+          <!-- Sub-flujo 1.2 · Agenda -->
+          <h3 class="collapsible"><span class="chev"></span>1.2 · Agenda</h3>
+          <div class="nav-sub">
+            <button class="nav-item" data-target="agenda" data-page="1"><span class="num">1.2.1</span>Horario</button>
+            <button class="nav-item" data-target="agenda" data-page="2"><span class="num">1.2.2</span>Detalle clase</button>
+            <button class="nav-item" data-target="agenda" data-page="3"><span class="num">1.2.3</span>Selección plaza S02</button>
+            <button class="nav-item" data-target="agenda" data-page="4"><span class="num">1.2.4</span>Reserva confirmada</button>
+            <button class="nav-item" data-target="agenda" data-page="5"><span class="num">1.2.5</span>Plaza reservada</button>
+            <button class="nav-item" data-target="agenda" data-page="6"><span class="num">1.2.6</span>Cancelar reserva</button>
+          </div>
+
+          <!-- Sub-flujo 1.3 · Entrenamiento · Buscar -->
+          <h3 class="collapsible"><span class="chev"></span>1.3 · Entrenamiento · Buscar</h3>
+          <div class="nav-sub">
+            <button class="nav-item" data-target="entrenamiento" data-page="1"><span class="num">1.3.1</span>Bottom-sheet</button>
+            <button class="nav-item" data-target="entrenamiento" data-page="6"><span class="num">1.3.2</span>Catálogo rutinas</button>
+            <button class="nav-item" data-target="entrenamiento" data-page="8"><span class="num">1.3.3</span>Body Tone · niveles</button>
+            <button class="nav-item" data-target="entrenamiento" data-page="10"><span class="num">1.3.4</span>Mi entreno · Sesión 1</button>
+            <button class="nav-item" data-target="entrenamiento" data-page="11"><span class="num">1.3.5</span>Detalle clúster</button>
+            <button class="nav-item" data-target="entrenamiento" data-page="12"><span class="num">1.3.6</span>Modal · Cuidado</button>
+            <button class="nav-item" data-target="entrenamiento" data-page="13"><span class="num">1.3.7</span>Modal · Recompensa</button>
+            <button class="nav-item" data-target="entrenamiento" data-page="14"><span class="num">1.3.8</span>Sesión 1 validada</button>
+            <button class="nav-item" data-target="entrenamiento" data-page="15"><span class="num">1.3.9</span>Sesión 2</button>
+          </div>
+
+          <!-- Sub-flujo 1.4 · Entrenamiento · Crear -->
+          <h3 class="collapsible"><span class="chev"></span>1.4 · Entrenamiento · Crear</h3>
+          <div class="nav-sub">
+            <button class="nav-item" data-target="entrenamiento" data-page="17"><span class="num">1.4.1</span>Lista · scroll completo</button>
+            <button class="nav-item" data-target="entrenamiento" data-page="18"><span class="num">1.4.2</span>Mi sesión</button>
+            <button class="nav-item" data-target="entrenamiento" data-page="19"><span class="num">1.4.3</span>Sheet · Opciones</button>
+            <button class="nav-item" data-target="entrenamiento" data-page="20"><span class="num">1.4.4</span>Guardar · con nombre</button>
+            <button class="nav-item" data-target="entrenamiento" data-page="21"><span class="num">1.4.5</span>Sesión 1 · validada</button>
+            <button class="nav-item" data-target="entrenamiento" data-page="22"><span class="num">1.4.6</span>Detalle clúster</button>
+            <button class="nav-item" data-target="entrenamiento" data-page="23"><span class="num">1.4.7</span>Modal · Cuidado</button>
+            <button class="nav-item" data-target="entrenamiento" data-page="24"><span class="num">1.4.8</span>Modal · Recompensa</button>
+          </div>
+
+          <!-- Sub-flujo 1.5 · Pesaje básculas -->
+          <h3 class="collapsible"><span class="chev"></span>1.5 · Pesaje básculas</h3>
+          <div class="nav-sub">
+            <button class="nav-item" data-target="pesaje" data-page="1"><span class="num">1.5.1</span>Sheet Composición corporal</button>
+            <button class="nav-item" data-target="pesaje" data-page="2"><span class="num">1.5.2</span>Mis pesajes</button>
+            <button class="nav-item" data-target="pesaje" data-page="3"><span class="num">1.5.3</span>Detalle · Datos obtenidos</button>
+            <button class="nav-item" data-target="pesaje" data-page="4"><span class="num">1.5.4</span>Detalle · Estado físico</button>
+          </div>
+
+          <!-- Sub-flujo 1.6 · Dieta -->
+          <h3 class="collapsible"><span class="chev"></span>1.6 · Dieta</h3>
+          <div class="nav-sub">
+            <button class="nav-item" data-target="dieta" data-page="1"><span class="num">1.6.1</span>Mi dieta · día completo</button>
+          </div>
+
+          <!-- Sub-flujo 1.7 · Rewards -->
+          <h3 class="collapsible"><span class="chev"></span>1.7 · Rewards</h3>
+          <div class="nav-sub">
+            <button class="nav-item" data-target="rewards" data-page="1"><span class="num">1.7.1</span>Rewards · principal</button>
+            <button class="nav-item" data-target="rewards" data-page="2"><span class="num">1.7.2</span>Compartir · sheet</button>
+            <button class="nav-item" data-target="rewards" data-page="3"><span class="num">1.7.3</span>Landing externa</button>
+            <button class="nav-item" data-target="rewards" data-page="4"><span class="num">1.7.4</span>Listado completo</button>
+            <button class="nav-item" data-target="rewards" data-page="5"><span class="num">1.7.5</span>Detalle · solicitada</button>
+          </div>
+
+        </div>
+
+        <!-- Mi centro (parent contraíble — colapsado por defecto para no saturar) -->
+        <button class="nav-item parent collapsed" data-target="centro">
+          <span class="caret"></span>
+          <span class="num">2</span>Mi centro
+        </button>
+
+        <div class="nav-children">
+
+          <!-- Sub-flujo 2.1 · Tienda (flujo completo de compra) -->
+          <h3 class="collapsible collapsed"><span class="chev"></span>2.1 · Tienda</h3>
+          <div class="nav-sub">
+            <button class="nav-item" data-target="tienda" data-page="1" data-from="centro"><span class="num">2.1.1</span>Catálogo principal</button>
+            <button class="nav-item" data-target="tienda" data-page="2" data-from="centro"><span class="num">2.1.2</span>Detalle producto</button>
+            <button class="nav-item" data-target="tienda" data-page="3" data-from="centro"><span class="num">2.1.3</span>Detalles del pago</button>
+            <button class="nav-item" data-target="tienda" data-page="4" data-from="centro"><span class="num">2.1.4</span>Dropdown método</button>
+            <button class="nav-item" data-target="tienda" data-page="5" data-from="centro"><span class="num">2.1.5</span>Tarjeta seleccionada</button>
+            <button class="nav-item" data-target="tienda" data-page="6" data-from="centro"><span class="num">2.1.6</span>Confirmar habilitado</button>
+            <button class="nav-item" data-target="tienda" data-page="7" data-from="centro"><span class="num">2.1.7</span>Modal · Compra OK</button>
+            <button class="nav-item" data-target="tienda" data-page="8" data-from="centro"><span class="num">2.1.8</span>Cartera</button>
+          </div>
+
+          <!-- Sub-flujo 2.2 · Notificaciones (lista + detalle bottom-sheet) -->
+          <h3 class="collapsible collapsed"><span class="chev"></span>2.2 · Notificaciones</h3>
+          <div class="nav-sub">
+            <button class="nav-item" data-target="notificaciones" data-page="1" data-from="centro"><span class="num">2.2.1</span>Lista</button>
+            <button class="nav-item" data-target="notificaciones" data-page="2" data-from="centro"><span class="num">2.2.2</span>Detalle · RESET EXPERIENCE</button>
+          </div>
+
+          <!-- Sub-flujo 2.3 · Gymder (red social fitness + podcast) -->
+          <h3 class="collapsible collapsed"><span class="chev"></span>2.3 · Gymder</h3>
+          <div class="nav-sub">
+            <button class="nav-item" data-target="gymder" data-page="1" data-from="centro"><span class="num">2.3.1</span>Home</button>
+            <button class="nav-item" data-target="gymder" data-page="2" data-from="centro"><span class="num">2.3.2</span>Discover · Martina</button>
+            <button class="nav-item" data-target="gymder" data-page="3" data-from="centro"><span class="num">2.3.3</span>Discover · Marco</button>
+            <button class="nav-item" data-target="gymder" data-page="4" data-from="centro"><span class="num">2.3.4</span>Discover · Alex</button>
+            <button class="nav-item" data-target="gymder" data-page="5" data-from="centro"><span class="num">2.3.5</span>Discover · Noa</button>
+            <button class="nav-item" data-target="gymder" data-page="6" data-from="centro"><span class="num">2.3.6</span>Podcast · El club de las 3H</button>
+            <button class="nav-item" data-target="gymder" data-page="7" data-from="centro"><span class="num">2.3.7</span>Episodio · El deber que desnuda</button>
+          </div>
+
+          <!-- Sub-flujo 2.4 · Reservas (espejo del flujo Agenda) -->
+          <h3 class="collapsible collapsed"><span class="chev"></span>2.4 · Reservas</h3>
+          <div class="nav-sub">
+            <button class="nav-item" data-target="agenda" data-page="1" data-from="centro"><span class="num">2.4.1</span>Horario</button>
+            <button class="nav-item" data-target="agenda" data-page="2" data-from="centro"><span class="num">2.4.2</span>Detalle clase</button>
+            <button class="nav-item" data-target="agenda" data-page="3" data-from="centro"><span class="num">2.4.3</span>Selección plaza S02</button>
+            <button class="nav-item" data-target="agenda" data-page="4" data-from="centro"><span class="num">2.4.4</span>Reserva confirmada</button>
+            <button class="nav-item" data-target="agenda" data-page="5" data-from="centro"><span class="num">2.4.5</span>Plaza reservada</button>
+            <button class="nav-item" data-target="agenda" data-page="6" data-from="centro"><span class="num">2.4.6</span>Cancelar reserva</button>
+          </div>
+
+          <!-- Sub-flujo 2.5 · Entrenamiento (espejo de Buscar + Crear) -->
+          <h3 class="collapsible collapsed"><span class="chev"></span>2.5 · Entrenamiento</h3>
+          <div class="nav-sub">
+            <button class="nav-item" data-target="entrenamiento" data-page="1" data-from="centro"><span class="num">2.5.1</span>Bottom-sheet</button>
+            <button class="nav-item" data-target="entrenamiento" data-page="6" data-from="centro"><span class="num">2.5.2</span>Catálogo rutinas</button>
+            <button class="nav-item" data-target="entrenamiento" data-page="8" data-from="centro"><span class="num">2.5.3</span>Body Tone · niveles</button>
+            <button class="nav-item" data-target="entrenamiento" data-page="10" data-from="centro"><span class="num">2.5.4</span>Mi entreno · Sesión 1</button>
+            <button class="nav-item" data-target="entrenamiento" data-page="11" data-from="centro"><span class="num">2.5.5</span>Detalle clúster</button>
+            <button class="nav-item" data-target="entrenamiento" data-page="12" data-from="centro"><span class="num">2.5.6</span>Modal · Cuidado</button>
+            <button class="nav-item" data-target="entrenamiento" data-page="13" data-from="centro"><span class="num">2.5.7</span>Modal · Recompensa</button>
+            <button class="nav-item" data-target="entrenamiento" data-page="14" data-from="centro"><span class="num">2.5.8</span>Sesión 1 validada</button>
+            <button class="nav-item" data-target="entrenamiento" data-page="15" data-from="centro"><span class="num">2.5.9</span>Sesión 2</button>
+            <button class="nav-item" data-target="entrenamiento" data-page="17" data-from="centro"><span class="num">2.5.10</span>Crear · Lista scroll</button>
+            <button class="nav-item" data-target="entrenamiento" data-page="18" data-from="centro"><span class="num">2.5.11</span>Crear · Mi sesión</button>
+            <button class="nav-item" data-target="entrenamiento" data-page="19" data-from="centro"><span class="num">2.5.12</span>Crear · Sheet Opciones</button>
+            <button class="nav-item" data-target="entrenamiento" data-page="20" data-from="centro"><span class="num">2.5.13</span>Crear · Guardar nombre</button>
+            <button class="nav-item" data-target="entrenamiento" data-page="21" data-from="centro"><span class="num">2.5.14</span>Crear · Sesión 1 validada</button>
+            <button class="nav-item" data-target="entrenamiento" data-page="22" data-from="centro"><span class="num">2.5.15</span>Crear · Detalle clúster</button>
+            <button class="nav-item" data-target="entrenamiento" data-page="23" data-from="centro"><span class="num">2.5.16</span>Crear · Modal Cuidado</button>
+            <button class="nav-item" data-target="entrenamiento" data-page="24" data-from="centro"><span class="num">2.5.17</span>Crear · Modal Recompensa</button>
+          </div>
+
+          <!-- Sub-flujo 2.6 · Nutrición (espejo del flujo Dieta) -->
+          <h3 class="collapsible collapsed"><span class="chev"></span>2.6 · Nutrición</h3>
+          <div class="nav-sub">
+            <button class="nav-item" data-target="dieta" data-page="1" data-from="centro"><span class="num">2.6.1</span>Mi dieta · día completo</button>
+          </div>
+
+          <!-- Sub-flujo 2.7 · Rewards (espejo del flujo Rewards) -->
+          <h3 class="collapsible collapsed"><span class="chev"></span>2.7 · Rewards</h3>
+          <div class="nav-sub">
+            <button class="nav-item" data-target="rewards" data-page="1" data-from="centro"><span class="num">2.7.1</span>Rewards · principal</button>
+            <button class="nav-item" data-target="rewards" data-page="2" data-from="centro"><span class="num">2.7.2</span>Compartir · sheet</button>
+            <button class="nav-item" data-target="rewards" data-page="3" data-from="centro"><span class="num">2.7.3</span>Landing externa</button>
+            <button class="nav-item" data-target="rewards" data-page="4" data-from="centro"><span class="num">2.7.4</span>Listado completo</button>
+            <button class="nav-item" data-target="rewards" data-page="5" data-from="centro"><span class="num">2.7.5</span>Detalle · solicitada</button>
+          </div>
+
+        </div>
+
+        <!-- Resto de tabs del bottom nav -->
+        <!-- Mi perfil (parent contraíble) -->
+        <button class="nav-item parent collapsed" data-target="perfil">
+          <span class="caret"></span>
+          <span class="num">3</span>Mi perfil
+        </button>
+
+        <div class="nav-children">
+
+          <!-- Sub-flujo 3.1 · Cartera (compra de suscripciones) -->
+          <h3 class="collapsible collapsed"><span class="chev"></span>3.1 · Cartera</h3>
+          <div class="nav-sub">
+            <button class="nav-item" data-target="cartera" data-page="1" data-from="perfil"><span class="num">3.1.1</span>Catálogo · Suscripciones</button>
+            <button class="nav-item" data-target="cartera" data-page="2" data-from="perfil"><span class="num">3.1.2</span>Detalles del pago</button>
+            <button class="nav-item" data-target="cartera" data-page="3" data-from="perfil"><span class="num">3.1.3</span>Dropdown método</button>
+            <button class="nav-item" data-target="cartera" data-page="4" data-from="perfil"><span class="num">3.1.4</span>Tarjeta seleccionada</button>
+            <button class="nav-item" data-target="cartera" data-page="5" data-from="perfil"><span class="num">3.1.5</span>Confirmar habilitado</button>
+            <button class="nav-item" data-target="cartera" data-page="6" data-from="perfil"><span class="num">3.1.6</span>Modal · Compra OK</button>
+            <button class="nav-item" data-target="cartera" data-page="7" data-from="perfil"><span class="num">3.1.7</span>Cartera · Mis suscripciones</button>
+          </div>
+
+          <!-- Sub-flujo 3.2 · QR acceso (mockup: 2 opciones + mostrar/escanear) -->
+          <h3 class="collapsible collapsed"><span class="chev"></span>3.2 · QR acceso</h3>
+          <div class="nav-sub">
+            <button class="nav-item" data-target="qr-acceso" data-page="1" data-from="perfil"><span class="num">3.2.1</span>Main · 2 opciones</button>
+            <button class="nav-item" data-target="qr-acceso" data-page="2" data-from="perfil"><span class="num">3.2.2</span>Mostrar mi QR</button>
+            <button class="nav-item" data-target="qr-acceso" data-page="3" data-from="perfil"><span class="num">3.2.3</span>Escanear código</button>
+          </div>
+
+          <!-- Sub-flujo 3.3 · Pesaje básculas (espejo del flujo 1.5) -->
+          <h3 class="collapsible collapsed"><span class="chev"></span>3.3 · Pesaje básculas</h3>
+          <div class="nav-sub">
+            <button class="nav-item" data-target="pesaje" data-page="1" data-from="perfil"><span class="num">3.3.1</span>Sheet Composición corporal</button>
+            <button class="nav-item" data-target="pesaje" data-page="2" data-from="perfil"><span class="num">3.3.2</span>Mis pesajes</button>
+            <button class="nav-item" data-target="pesaje" data-page="3" data-from="perfil"><span class="num">3.3.3</span>Detalle · Datos obtenidos</button>
+            <button class="nav-item" data-target="pesaje" data-page="4" data-from="perfil"><span class="num">3.3.4</span>Detalle · Estado físico</button>
+          </div>
+
+          <!-- Sub-flujo 3.4 · Dietas personalizadas (plan de dieta equilibrada) -->
+          <h3 class="collapsible collapsed"><span class="chev"></span>3.4 · Dietas personalizadas</h3>
+          <div class="nav-sub">
+            <button class="nav-item" data-target="dietas-personalizadas" data-page="1" data-from="perfil"><span class="num">3.4.1</span>Plan de dieta equilibrada</button>
+          </div>
+
+        </div>
+
+        <!-- Más (parent contraíble — colapsado por defecto) -->
+        <button class="nav-item parent collapsed" data-target="mas">
+          <span class="caret"></span>
+          <span class="num">4</span>Más
+        </button>
+
+        <div class="nav-children">
+
+          <!-- Sub-flujo 4.1 · Mis actividades (espejo del flujo 1.2 Agenda) -->
+          <h3 class="collapsible collapsed"><span class="chev"></span>4.1 · Mis actividades</h3>
+          <div class="nav-sub">
+            <button class="nav-item" data-target="agenda" data-page="1" data-from="mas"><span class="num">4.1.1</span>Horario</button>
+            <button class="nav-item" data-target="agenda" data-page="2" data-from="mas"><span class="num">4.1.2</span>Detalle clase</button>
+            <button class="nav-item" data-target="agenda" data-page="3" data-from="mas"><span class="num">4.1.3</span>Selección plaza S02</button>
+            <button class="nav-item" data-target="agenda" data-page="4" data-from="mas"><span class="num">4.1.4</span>Reserva confirmada</button>
+            <button class="nav-item" data-target="agenda" data-page="5" data-from="mas"><span class="num">4.1.5</span>Plaza reservada</button>
+            <button class="nav-item" data-target="agenda" data-page="6" data-from="mas"><span class="num">4.1.6</span>Cancelar reserva</button>
+          </div>
+
+          <!-- Sub-flujo 4.2 · Notificaciones (espejo del flujo 2.2 Notificaciones) -->
+          <h3 class="collapsible collapsed"><span class="chev"></span>4.2 · Notificaciones</h3>
+          <div class="nav-sub">
+            <button class="nav-item" data-target="notificaciones" data-page="1" data-from="mas"><span class="num">4.2.1</span>Lista</button>
+            <button class="nav-item" data-target="notificaciones" data-page="2" data-from="mas"><span class="num">4.2.2</span>Detalle · RESET EXPERIENCE</button>
+          </div>
+
+          <!-- Sub-flujo 4.3 · Mis entrenamientos (espejo del flujo 1.4 Entrenamiento · Crear) -->
+          <h3 class="collapsible collapsed"><span class="chev"></span>4.3 · Mis entrenamientos</h3>
+          <div class="nav-sub">
+            <button class="nav-item" data-target="entrenamiento" data-page="17" data-from="mas"><span class="num">4.3.1</span>Lista · scroll completo</button>
+            <button class="nav-item" data-target="entrenamiento" data-page="18" data-from="mas"><span class="num">4.3.2</span>Mi sesión</button>
+            <button class="nav-item" data-target="entrenamiento" data-page="19" data-from="mas"><span class="num">4.3.3</span>Sheet · Opciones</button>
+            <button class="nav-item" data-target="entrenamiento" data-page="20" data-from="mas"><span class="num">4.3.4</span>Guardar · con nombre</button>
+            <button class="nav-item" data-target="entrenamiento" data-page="21" data-from="mas"><span class="num">4.3.5</span>Sesión 1 · validada</button>
+            <button class="nav-item" data-target="entrenamiento" data-page="22" data-from="mas"><span class="num">4.3.6</span>Detalle clúster</button>
+            <button class="nav-item" data-target="entrenamiento" data-page="23" data-from="mas"><span class="num">4.3.7</span>Modal · Cuidado</button>
+            <button class="nav-item" data-target="entrenamiento" data-page="24" data-from="mas"><span class="num">4.3.8</span>Modal · Recompensa</button>
+          </div>
+
+          <!-- Sub-flujo 4.4 · Gymder (espejo del flujo 2.3 Gymder) -->
+          <h3 class="collapsible collapsed"><span class="chev"></span>4.4 · Gymder</h3>
+          <div class="nav-sub">
+            <button class="nav-item" data-target="gymder" data-page="1" data-from="mas"><span class="num">4.4.1</span>Home</button>
+            <button class="nav-item" data-target="gymder" data-page="2" data-from="mas"><span class="num">4.4.2</span>Discover · Martina</button>
+            <button class="nav-item" data-target="gymder" data-page="3" data-from="mas"><span class="num">4.4.3</span>Discover · Marco</button>
+            <button class="nav-item" data-target="gymder" data-page="4" data-from="mas"><span class="num">4.4.4</span>Discover · Alex</button>
+            <button class="nav-item" data-target="gymder" data-page="5" data-from="mas"><span class="num">4.4.5</span>Discover · Noa</button>
+            <button class="nav-item" data-target="gymder" data-page="6" data-from="mas"><span class="num">4.4.6</span>Podcast · El club de las 3H</button>
+            <button class="nav-item" data-target="gymder" data-page="7" data-from="mas"><span class="num">4.4.7</span>Episodio · El deber que desnuda</button>
+          </div>
+
+          <!-- Sub-flujo 4.5 · Cartera (espejo del flujo 3.1 Cartera) -->
+          <h3 class="collapsible collapsed"><span class="chev"></span>4.5 · Cartera</h3>
+          <div class="nav-sub">
+            <button class="nav-item" data-target="cartera" data-page="1" data-from="mas"><span class="num">4.5.1</span>Catálogo · Suscripciones</button>
+            <button class="nav-item" data-target="cartera" data-page="2" data-from="mas"><span class="num">4.5.2</span>Detalles del pago</button>
+            <button class="nav-item" data-target="cartera" data-page="3" data-from="mas"><span class="num">4.5.3</span>Dropdown método</button>
+            <button class="nav-item" data-target="cartera" data-page="4" data-from="mas"><span class="num">4.5.4</span>Tarjeta seleccionada</button>
+            <button class="nav-item" data-target="cartera" data-page="5" data-from="mas"><span class="num">4.5.5</span>Confirmar habilitado</button>
+            <button class="nav-item" data-target="cartera" data-page="6" data-from="mas"><span class="num">4.5.6</span>Modal · Compra OK</button>
+            <button class="nav-item" data-target="cartera" data-page="7" data-from="mas"><span class="num">4.5.7</span>Cartera · Mis suscripciones</button>
+          </div>
+
+          <!-- Sub-flujo 4.6 · QR acceso (espejo del flujo 3.2 QR acceso) -->
+          <h3 class="collapsible collapsed"><span class="chev"></span>4.6 · QR acceso</h3>
+          <div class="nav-sub">
+            <button class="nav-item" data-target="qr-acceso" data-page="1" data-from="mas"><span class="num">4.6.1</span>Main · 2 opciones</button>
+            <button class="nav-item" data-target="qr-acceso" data-page="2" data-from="mas"><span class="num">4.6.2</span>Mostrar mi QR</button>
+            <button class="nav-item" data-target="qr-acceso" data-page="3" data-from="mas"><span class="num">4.6.3</span>Escanear código</button>
+          </div>
+
+        </div>
+
+      </div>
+    </nav>
+  </aside>
+
+  <main class="stage">
+    <button class="toggle" id="toggle" title="Ctrl+B" aria-label="Toggle menú">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+
+    <div class="iphone-wrap" id="iphoneWrap">
+      <div class="iphone">
+        <span class="btn b-action"></span>
+        <span class="btn b-vol-up"></span>
+        <span class="btn b-vol-dn"></span>
+        <span class="btn b-power"></span>
+
+        <div class="screen" id="screen">
+          <div class="island"></div>
+
+          <div class="views">
+            <section class="view active" data-id="hoy">
+              <div class="scroll-img">
+                <img class="bg" src="stitched/hoy.jpg" alt="">
+                <!-- Hotspot invisible sobre la card "Asistente inicial" -->
+                <button type="button" class="tap-zone" data-go-flow="asistente" data-page="1"
+                        style="left:3%;right:3%;top:7.5%;height:9.5%;border-radius:18px"
+                        onclick="window._goFlow && window._goFlow('asistente',1)"
+                        aria-label="Abrir Asistente inicial"></button>
+                <!-- Hotspot invisible que cubre la etiqueta "Agenda" + la card "Pulsa para reservar" -->
+                <button type="button" class="tap-zone" data-go-flow="agenda" data-page="1"
+                        style="left:3%;right:3%;top:17.5%;height:14%;border-radius:18px"
+                        onclick="window._goFlow && window._goFlow('agenda',1)"
+                        aria-label="Abrir Agenda"></button>
+                <!-- Hotspot invisible: etiqueta "Entrenamiento" + card "Pulsa para empezar" -->
+                <button type="button" class="tap-zone" data-go-flow="entrenamiento" data-page="1"
+                        style="left:3%;right:3%;top:33%;height:14%;border-radius:18px"
+                        onclick="window._goFlow && window._goFlow('entrenamiento',1)"
+                        aria-label="Abrir Entrenamiento"></button>
+                <!-- Hotspot invisible sobre la card "Composición corporal" -->
+                <button type="button" class="tap-zone" data-go-flow="pesaje" data-page="1"
+                        style="left:3%;right:3%;top:50%;height:10%;border-radius:18px"
+                        onclick="window._goFlow && window._goFlow('pesaje',1)"
+                        aria-label="Abrir Composición corporal"></button>
+                <!-- Hotspot invisible sobre la card "Dieta" -->
+                <button type="button" class="tap-zone" data-go-flow="dieta" data-page="1"
+                        style="left:3%;right:3%;top:62%;height:7%;border-radius:18px"
+                        onclick="window._goFlow && window._goFlow('dieta',1)"
+                        aria-label="Abrir Dieta"></button>
+                <!-- Hotspot invisible sobre la card Rewards (gold gradient, y=72.1%-78.8% en hoy.jpg) -->
+                <button type="button" class="tap-zone" data-go-flow="rewards" data-page="1"
+                        style="left:3%;right:3%;top:72%;height:7%;border-radius:18px"
+                        onclick="window._goFlow && window._goFlow('rewards',1)"
+                        aria-label="Abrir Rewards"></button>
+                <!-- Hotspot invisible sobre el botón naranja "Invita y gana" (y 85.4%-88.6% en hoy.jpg) -->
+                <button type="button" class="tap-zone" data-go-flow="rewards" data-page="1"
+                        style="left:3%;right:3%;top:85%;height:4.5%;border-radius:30px"
+                        onclick="window._goFlow && window._goFlow('rewards',1)"
+                        aria-label="Invita y gana"></button>
+              </div>
+            </section>
+
+            <section class="view" data-id="centro">
+              <div class="scroll-img">
+                <img class="bg" src="stitched/centro.jpg" alt="">
+
+                <!-- Tile "Tienda" (full-width, top of page)
+                     PIL: y=412-864 (10.61-22.25%). -->
+                <button type="button" class="tap-zone" data-go-flow="tienda" data-page="1"
+                        style="left:3%;width:94%;top:10.5%;height:12%;border-radius:18px"
+                        onclick="window._goFlow && window._goFlow('tienda',1)"
+                        aria-label="Tienda — abrir tienda"></button>
+
+                <!-- Tile "Notificaciones" (full-width)
+                     PIL: y=909-1364 (23.40-35.12%). -->
+                <button type="button" class="tap-zone" data-go-flow="notificaciones" data-page="1"
+                        style="left:3%;width:94%;top:23.5%;height:12%;border-radius:18px"
+                        onclick="window._goFlow && window._goFlow('notificaciones',1)"
+                        aria-label="Notificaciones — abrir notificaciones"></button>
+
+                <!-- Tile "Gymder®" (full-width)
+                     PIL: y=1407-1865 (36.2-48%). -->
+                <button type="button" class="tap-zone" data-go-flow="gymder" data-page="1"
+                        style="left:3%;width:94%;top:36.5%;height:12%;border-radius:18px"
+                        onclick="window._goFlow && window._goFlow('gymder',1)"
+                        aria-label="Gymder — abrir Gymder"></button>
+
+                <!-- Fila 2x2 (Reserva de Actividades / Asígnate un Entrenamiento)
+                     PIL: banda fila tiles y=2126-2359 (54.74-60.74%). -->
+
+                <!-- Tile izq · "Reserva de Actividades" → flujo 1.2 Agenda · Horario -->
+                <button type="button" class="tap-zone" data-go-flow="agenda" data-page="1"
+                        style="left:3%;width:45%;top:54.5%;height:6.5%;border-radius:18px"
+                        onclick="window._goFlow && window._goFlow('agenda',1)"
+                        aria-label="Reserva de Actividades — abrir Agenda"></button>
+
+                <!-- Tile der · "Asígnate un Entrenamiento" → flujo 1.3 Entrenamiento · Buscar -->
+                <button type="button" class="tap-zone" data-go-flow="entrenamiento" data-page="1"
+                        style="left:52%;width:45%;top:54.5%;height:6.5%;border-radius:18px"
+                        onclick="window._goFlow && window._goFlow('entrenamiento',1)"
+                        aria-label="Asígnate un Entrenamiento — abrir Entrenamiento"></button>
+
+                <!-- Fila 2x2 (Nutrición / Rewards)
+                     PIL: banda fila tiles y=2613-2863 (67.28-73.71%). -->
+
+                <!-- Tile izq · "Nutrición" → flujo 1.6 Dieta · día completo -->
+                <button type="button" class="tap-zone" data-go-flow="dieta" data-page="1"
+                        style="left:3%;width:45%;top:67%;height:6.7%;border-radius:18px"
+                        onclick="window._goFlow && window._goFlow('dieta',1)"
+                        aria-label="Nutrición — abrir Dieta"></button>
+
+                <!-- Tile der · "Rewards" → flujo 1.7 Rewards · principal -->
+                <button type="button" class="tap-zone" data-go-flow="rewards" data-page="1"
+                        style="left:52%;width:45%;top:67%;height:6.7%;border-radius:18px"
+                        onclick="window._goFlow && window._goFlow('rewards',1)"
+                        aria-label="Rewards — abrir Rewards"></button>
+              </div>
+            </section>
+            <section class="view" data-id="perfil">
+              <div class="scroll-img">
+                <img class="bg" src="stitched/perfil.jpg" alt="">
+                <!-- Icono "QR" en el header (top-left)
+                     PIL: x=110-200 (9-16.4%), y=60-150 (2-5%). -->
+                <button type="button" class="tap-zone" data-go-flow="qr-acceso" data-page="1"
+                        style="left:7%;width:13%;top:1.5%;height:5%;border-radius:8px"
+                        onclick="window._goFlow && window._goFlow('qr-acceso',1)"
+                        aria-label="QR de acceso"></button>
+
+                <!-- Icono "Cartera" (wallet) en el header (centro arriba)
+                     PIL: centro x=596 (48.81%), área y≈80-240 source. -->
+                <button type="button" class="tap-zone" data-go-flow="cartera" data-page="1"
+                        style="left:42%;width:16%;top:2.5%;height:6.5%;border-radius:8px"
+                        onclick="window._goFlow && window._goFlow('cartera',1)"
+                        aria-label="Cartera — abrir Cartera"></button>
+
+                <!-- CTA naranja "Registrar nuevo pesaje" (PIL: y=1505-1654 = 50.83-55.86%)
+                     → flujo 1.5 Pesaje · Detalle Datos obtenidos (page 3) -->
+                <button type="button" class="tap-zone" data-go-flow="pesaje" data-page="3"
+                        style="left:5%;right:5%;top:50.5%;height:5.5%;border-radius:50px"
+                        onclick="window._goFlow && window._goFlow('pesaje',3)"
+                        aria-label="Registrar nuevo pesaje"></button>
+
+                <!-- CTA outline "Histórico de pesajes" (PIL: y=1772-1825 = 59.84-61.63%)
+                     → flujo 1.5 Pesaje · Mis pesajes (page 2) -->
+                <button type="button" class="tap-zone" data-go-flow="pesaje" data-page="2"
+                        style="left:5%;right:5%;top:59%;height:3.5%;border-radius:50px"
+                        onclick="window._goFlow && window._goFlow('pesaje',2)"
+                        aria-label="Histórico de pesajes"></button>
+
+                <!-- CTA outline "Dietas personalizadas" (PIL: y=2204-2255 = 74.43-76.16%)
+                     → flujo Dietas personalizadas (plan de dieta) -->
+                <button type="button" class="tap-zone" data-go-flow="dietas-personalizadas" data-page="1"
+                        style="left:5%;right:5%;top:73.5%;height:3.8%;border-radius:50px"
+                        onclick="window._goFlow && window._goFlow('dietas-personalizadas',1)"
+                        aria-label="Dietas personalizadas"></button>
+              </div>
+            </section>
+            <section class="view" data-id="mas">
+              <div class="scroll-img">
+                <img class="bg" src="stitched/mas.jpg" alt="">
+                <!-- Grid bottom-sheet: PIL columnas detectadas (centros x):
+                     Cartera 13.16% · QR 31.60% · Mi activi 50.08% ·
+                     Notifica 68.57% · Mis entr 86.84% (fila 1)
+                     Gymder® 13.16% (fila 2)
+                     Fila 1: y=1980-2140 (84.5-91.4%)
+                     Fila 2: y=2200-2342 (93.9-100%) -->
+
+                <!-- Col 1 · "Cartera" → flujo 3.1 Cartera (catálogo suscripciones) -->
+                <button type="button" class="tap-zone" data-go-flow="cartera" data-page="1"
+                        style="left:4%;width:18%;top:84.5%;height:7%;border-radius:14px"
+                        onclick="window._goFlow && window._goFlow('cartera',1)"
+                        aria-label="Cartera — abrir Cartera"></button>
+
+                <!-- Col 2 · "QR" → flujo 3.2 QR acceso -->
+                <button type="button" class="tap-zone" data-go-flow="qr-acceso" data-page="1"
+                        style="left:22.5%;width:18%;top:84.5%;height:7%;border-radius:14px"
+                        onclick="window._goFlow && window._goFlow('qr-acceso',1)"
+                        aria-label="QR — abrir QR acceso"></button>
+
+                <!-- Col 3 · "Mi activi…" → flujo 1.2 Agenda -->
+                <button type="button" class="tap-zone" data-go-flow="agenda" data-page="1"
+                        style="left:41%;width:18%;top:84.5%;height:7%;border-radius:14px"
+                        onclick="window._goFlow && window._goFlow('agenda',1)"
+                        aria-label="Mi actividad — abrir Agenda"></button>
+
+                <!-- Col 4 · "Notifica…" → flujo 2.2 Notificaciones -->
+                <button type="button" class="tap-zone" data-go-flow="notificaciones" data-page="1"
+                        style="left:59.5%;width:18%;top:84.5%;height:7%;border-radius:14px"
+                        onclick="window._goFlow && window._goFlow('notificaciones',1)"
+                        aria-label="Notificaciones — abrir Notificaciones"></button>
+
+                <!-- Col 5 · "Mis entr…" → flujo 1.4 Entrenamiento · Crear (page 17) -->
+                <button type="button" class="tap-zone" data-go-flow="entrenamiento" data-page="17"
+                        style="left:78%;width:18%;top:84.5%;height:7%;border-radius:14px"
+                        onclick="window._goFlow && window._goFlow('entrenamiento',17)"
+                        aria-label="Mis entrenamientos — abrir Entrenamiento Crear"></button>
+
+                <!-- Fila 2 · Col 1 · "Gymder®" → flujo 2.3 Gymder -->
+                <button type="button" class="tap-zone" data-go-flow="gymder" data-page="1"
+                        style="left:4%;width:18%;top:93.5%;height:6%;border-radius:14px"
+                        onclick="window._goFlow && window._goFlow('gymder',1)"
+                        aria-label="Gymder — abrir Gymder"></button>
+              </div>
+            </section>
+
+            <section class="view" data-id="agenda">
+              <div class="flow" id="flow-agenda">
+                <div class="flow-page active" data-page="1">
+                  <img src="stitched/agenda/a1.jpg" alt="">
+                  <!-- Click en Cardio Boxing -> pagina 2 (detalle) -->
+                  <button type="button" class="tap-zone" data-go-flow="agenda" data-page="2"
+                          style="left:2.5%;right:2.5%;top:67.3%;height:9.7%;border-radius:14px"
+                          onclick="window._goFlow && window._goFlow('agenda',2)"
+                          aria-label="Ver detalle Cardio Boxing"></button>
+                </div>
+
+                <div class="flow-page" data-page="2">
+                  <img src="stitched/agenda/a2.jpg" alt="">
+                  <!-- Click en S02 -> pagina 3 (selecciona plaza) -->
+                  <button type="button" class="tap-zone" data-go-flow="agenda" data-page="3"
+                          style="left:20%;top:62%;width:17%;height:10%;border-radius:50%"
+                          onclick="window._goFlow && window._goFlow('agenda',3)"
+                          aria-label="Seleccionar plaza S02"></button>
+                </div>
+
+                <div class="flow-page" data-page="3">
+                  <img src="stitched/agenda/a3.jpg" alt="">
+                  <!-- Click en Reservar -> pagina 4 (confirmacion) -->
+                  <button type="button" class="tap-zone" data-go-flow="agenda" data-page="4"
+                          style="left:49%;top:92%;width:48%;height:6%;border-radius:30px"
+                          onclick="window._goFlow && window._goFlow('agenda',4)"
+                          aria-label="Reservar"></button>
+                </div>
+
+                <div class="flow-page" data-page="4">
+                  <img src="stitched/agenda/a4.jpg" alt="">
+                  <!-- Click en cualquier opcion del sheet -> pagina 5 (reserva hecha) -->
+                  <button type="button" class="tap-zone" data-go-flow="agenda" data-page="5"
+                          style="left:4%;top:83%;width:92%;height:13%;border-radius:18px"
+                          onclick="window._goFlow && window._goFlow('agenda',5)"
+                          aria-label="Cerrar confirmacion"></button>
+                </div>
+
+                <div class="flow-page" data-page="5">
+                  <img src="stitched/agenda/a5.jpg" alt="">
+                  <!-- Click en Cancelar reserva -> pagina 6 (sheet de cancelacion) -->
+                  <button type="button" class="tap-zone" data-go-flow="agenda" data-page="6"
+                          style="left:49%;top:92%;width:48%;height:6%;border-radius:30px"
+                          onclick="window._goFlow && window._goFlow('agenda',6)"
+                          aria-label="Cancelar reserva"></button>
+                </div>
+
+                <div class="flow-page" data-page="6">
+                  <img src="stitched/agenda/a6.jpg" alt="">
+                  <!-- Click en Si/No del sheet -> vuelve a Hoy tienes -->
+                  <button type="button" class="tap-zone" data-go-flow="hoy"
+                          style="left:4%;top:83%;width:92%;height:13%;border-radius:18px"
+                          onclick="window._goFlow && window._goFlow('hoy')"
+                          aria-label="Volver a Hoy tienes"></button>
+                </div>
+
+                <button class="flow-back" aria-label="Volver">
+                  <svg viewBox="0 0 24 24"><polyline points="15 6 9 12 15 18"/></svg>
+                </button>
+              </div>
+            </section>
+
+            <section class="view" data-id="asistente">
+              <div class="flow" id="flow-asistente">
+                <div class="flow-page active" data-page="1">
+                  <img src="stitched/asistente/av01.jpg" alt="">
+                  <!-- Solo el botón Comenzar (pill verde sólido, 69.5%-83%) -> p2 cuestionario -->
+                  <button type="button" class="tap-zone" data-go-flow="asistente" data-page="2"
+                          style="left:5%;right:5%;top:69%;height:14%;border-radius:30px"
+                          onclick="window._goFlow && window._goFlow('asistente',2)"
+                          aria-label="Comenzar"></button>
+                </div>
+
+                <div class="flow-page scroll" data-page="2">
+                  <div class="scroll-img">
+                    <img class="bg" src="stitched/asistente/cuestionario.jpg" alt="">
+
+                    <!-- Q1: ¿Cuál es tu Objetivo principal? · primera marcada por defecto -->
+                    <button type="button" class="q-radio checked" data-q="1" style="left:11.76%;top:14.77%" aria-label="Controlar o reducir mi peso"></button>
+                    <button type="button" class="q-radio" data-q="1" style="left:11.76%;top:18.46%" aria-label="Cuidar mi salud"></button>
+                    <button type="button" class="q-radio" data-q="1" style="left:11.76%;top:22.14%" aria-label="Mejorar mi forma física"></button>
+                    <button type="button" class="q-radio" data-q="1" style="left:11.76%;top:25.83%" aria-label="Ganar masa muscular"></button>
+
+                    <!-- Q2: ¿Cuántos días de ejercicio semanal? -->
+                    <button type="button" class="q-radio checked" data-q="2" style="left:11.76%;top:36.19%" aria-label="0 a 1 día a la semana"></button>
+                    <button type="button" class="q-radio" data-q="2" style="left:11.76%;top:39.88%" aria-label="2 o 3 días a la semana"></button>
+                    <button type="button" class="q-radio" data-q="2" style="left:11.76%;top:43.56%" aria-label="4 o más días a la semana"></button>
+
+                    <!-- Q3: ¿Tienes alguna contraindicación médica? -->
+                    <button type="button" class="q-radio checked" data-q="3" style="left:11.76%;top:53.93%" aria-label="Si"></button>
+                    <button type="button" class="q-radio" data-q="3" style="left:11.76%;top:57.61%" aria-label="No"></button>
+
+                    <!-- Q4: ¿Te gustaría asesoramiento personalizado? -->
+                    <button type="button" class="q-radio checked" data-q="4" style="left:11.76%;top:69.18%" aria-label="Si"></button>
+                    <button type="button" class="q-radio" data-q="4" style="left:11.76%;top:72.90%" aria-label="No"></button>
+
+                    <!-- Q5: ¿Cómo tienes previsto conseguir tus objetivos? -->
+                    <button type="button" class="q-radio checked" data-q="5" style="left:11.76%;top:83.80%" aria-label="Servicio presencial"></button>
+                    <button type="button" class="q-radio" data-q="5" style="left:11.76%;top:88.01%" aria-label="Servicio online"></button>
+
+                    <button type="button" class="tap-zone" data-go-flow="asistente" data-page="3"
+                            style="left:5%;right:5%;top:91%;height:6%;border-radius:30px"
+                            onclick="window._goFlow && window._goFlow('asistente',3)"
+                            aria-label="Guardar cuestionario"></button>
+                  </div>
+                </div>
+
+                <div class="flow-page" data-page="3">
+                  <img src="stitched/asistente/av09.jpg" alt="">
+                  <button type="button" class="tap-zone" data-go-flow="asistente" data-page="4"
+                          style="left:4%;right:4%;top:23%;height:9%;border-radius:8px"
+                          onclick="window._goFlow && window._goFlow('asistente',4)"
+                          aria-label="Hito 1: Define tus objetivos"></button>
+                </div>
+
+                <!-- p4: D · Hito 1 · Reserva (imagen recortada a 1220x3720 — solo 5 slots).
+                     Botones "Reservar" detectados con PIL en y=1986/2393/2728/3134/3542,
+                     que en el nuevo total 3720 equivalen a 53.4/64.3/73.3/84.3/95.2%. -->
+                <div class="flow-page scroll" data-page="4">
+                  <div class="scroll-img">
+                    <img class="bg" src="stitched/asistente/hito1-reserva.jpg" alt="">
+                    <button type="button" class="tap-zone" data-go-flow="asistente" data-page="5"
+                            style="left:65%;right:3%;top:53.4%;height:3%;border-radius:30px"
+                            onclick="window._goFlow && window._goFlow('asistente',5)"
+                            aria-label="Reservar 08:00"></button>
+                    <button type="button" class="tap-zone" data-go-flow="asistente" data-page="5"
+                            style="left:65%;right:3%;top:64.3%;height:3%;border-radius:30px"
+                            onclick="window._goFlow && window._goFlow('asistente',5)"
+                            aria-label="Reservar 08:15"></button>
+                    <button type="button" class="tap-zone" data-go-flow="asistente" data-page="5"
+                            style="left:65%;right:3%;top:73.3%;height:3%;border-radius:30px"
+                            onclick="window._goFlow && window._goFlow('asistente',5)"
+                            aria-label="Reservar 08:30"></button>
+                    <button type="button" class="tap-zone" data-go-flow="asistente" data-page="5"
+                            style="left:65%;right:3%;top:84.3%;height:3%;border-radius:30px"
+                            onclick="window._goFlow && window._goFlow('asistente',5)"
+                            aria-label="Reservar 08:45"></button>
+                    <button type="button" class="tap-zone" data-go-flow="asistente" data-page="5"
+                            style="left:65%;right:3%;top:95.2%;height:3%;border-radius:30px"
+                            onclick="window._goFlow && window._goFlow('asistente',5)"
+                            aria-label="Reservar 09:00 - 09:15"></button>
+                  </div>
+                </div>
+
+                <!-- p5: E · Hito 1 · Confirmación modal (av13). Confirmar -> p6 -->
+                <div class="flow-page" data-page="5">
+                  <img src="stitched/asistente/av13.jpg" alt="">
+                  <button type="button" class="tap-zone" data-go-flow="asistente" data-page="6"
+                          style="left:70%;right:5%;top:53%;height:5%;border-radius:8px"
+                          onclick="window._goFlow && window._goFlow('asistente',6)"
+                          aria-label="Confirmar reserva"></button>
+                </div>
+
+                <!-- p6: F · Hito 1 · Enhorabuena (av14) -->
+                <div class="flow-page" data-page="6">
+                  <img src="stitched/asistente/av14.jpg" alt="">
+                  <button type="button" class="tap-zone" data-go-flow="asistente" data-page="7"
+                          style="left:4%;right:4%;top:80%;height:14%;border-radius:30px"
+                          onclick="window._goFlow && window._goFlow('asistente',7)"
+                          aria-label="Continuar"></button>
+                </div>
+
+                <!-- p7: G · Guía paso a paso · hito 1 hecho (av15) -->
+                <div class="flow-page" data-page="7">
+                  <img src="stitched/asistente/av15.jpg" alt="">
+                  <button type="button" class="tap-zone" data-go-flow="asistente" data-page="8"
+                          style="left:4%;right:4%;top:32%;height:9%;border-radius:8px"
+                          onclick="window._goFlow && window._goFlow('asistente',8)"
+                          aria-label="Hito 2: Revisa tu plan"></button>
+                </div>
+
+                <!-- p8: H · Hito 2 · Calendario (av16) -->
+                <div class="flow-page" data-page="8">
+                  <img src="stitched/asistente/av16.jpg" alt="">
+                  <button type="button" class="tap-zone" data-go-flow="asistente" data-page="9"
+                          style="left:65%;right:3%;top:78%;height:6%;border-radius:30px"
+                          onclick="window._goFlow && window._goFlow('asistente',9)"
+                          aria-label="Reservar slot"></button>
+                </div>
+
+                <!-- p9: I · Hito 2 · Confirmación modal (av17) -->
+                <div class="flow-page" data-page="9">
+                  <img src="stitched/asistente/av17.jpg" alt="">
+                  <button type="button" class="tap-zone" data-go-flow="asistente" data-page="10"
+                          style="left:70%;right:5%;top:53%;height:5%;border-radius:8px"
+                          onclick="window._goFlow && window._goFlow('asistente',10)"
+                          aria-label="Confirmar reserva"></button>
+                </div>
+
+                <!-- p10: J · Hito 2 · Enhorabuena (av18) -->
+                <div class="flow-page" data-page="10">
+                  <img src="stitched/asistente/av18.jpg" alt="">
+                  <button type="button" class="tap-zone" data-go-flow="hoy"
+                          style="left:4%;right:4%;top:80%;height:14%;border-radius:30px"
+                          onclick="window._goFlow && window._goFlow('hoy')"
+                          aria-label="Volver a Hoy tienes"></button>
+                </div>
+
+                <button class="flow-back" aria-label="Volver">
+                  <svg viewBox="0 0 24 24"><polyline points="15 6 9 12 15 18"/></svg>
+                </button>
+              </div>
+            </section>
+
+            <section class="view" data-id="entrenamiento">
+              <div class="flow" id="flow-entrenamiento">
+
+                <!-- ===== RUTA BUSCAR (1-15) ===== -->
+
+                <!-- p1: Bottom-sheet "Entrenamiento". El fondo de la pantalla es la
+                     vista origen (hoy o centro) atenuada — se asigna dinámicamente
+                     desde JS según `lastTab`. Del b1.jpg sólo se muestra la parte
+                     inferior (el sheet blanco con sus 2 CTAs). -->
+                <div class="flow-page active" data-page="1" id="entrenamiento-p1">
+                  <!-- Fondo dinámico: hoy.jpg o centro.jpg según origen -->
+                  <div class="ent-p1-bg"></div>
+                  <!-- Capa oscura para atenuar el fondo -->
+                  <div class="ent-p1-dim"></div>
+                  <!-- Bottom-sheet: recorta b1.jpg para mostrar sólo su parte inferior
+                       (PIL: panel blanco arranca en y=1833 = 67.59% del JPG, alto ~33%) -->
+                  <div class="ent-p1-sheet">
+                    <img src="stitched/entrenamiento/buscar/b1.jpg" alt="">
+                  </div>
+                  <!-- Tap-zone que cubre la zona oscura: cerrar y volver al origen -->
+                  <button type="button" class="tap-zone" data-go-flow="hoy"
+                          style="left:0;right:0;top:0;height:67%"
+                          onclick="window._goFlow && window._goFlow('hoy')"
+                          aria-label="Cerrar"></button>
+                  <!-- Botón "Buscar entrenamiento" naranja filled (y 84-90.5% del JPG) → catálogo (page 6) -->
+                  <button type="button" class="tap-zone" data-go-flow="entrenamiento" data-page="6"
+                          style="left:4%;right:4%;top:84%;height:6.5%;border-radius:30px"
+                          onclick="window._goFlow && window._goFlow('entrenamiento',6)"
+                          aria-label="Buscar entrenamiento"></button>
+                  <!-- Botón "Crear nuevo entrenamiento" outline → wizard Crear (page 17) -->
+                  <button type="button" class="tap-zone" data-go-flow="entrenamiento" data-page="17"
+                          style="left:4%;right:4%;top:91.5%;height:6.5%;border-radius:30px"
+                          onclick="window._goFlow && window._goFlow('entrenamiento',17)"
+                          aria-label="Crear nuevo entrenamiento"></button>
+                </div>
+
+                <!-- Pages 2-5 (carrusel + listado de rutinas) eliminadas: el flujo va
+                     directamente del bottom-sheet (page 1) al catálogo completo (page 6). -->
+
+                <!-- Page 6: Catálogo de rutinas — imagen única scrollable resultado de
+                     stitchear b6.jpg + b7.jpg (sin duplicar las cards comunes). Solo el
+                     último card "Body Tone (45 Minutos)" es clickeable y abre page 8. -->
+                <div class="flow-page scroll" data-page="6">
+                  <div class="scroll-img">
+                    <img class="bg" src="stitched/entrenamiento/buscar/b6-7.jpg" alt="">
+                    <!-- Body Tone (45 minutos) ocupa los últimos ~16% del scroll → page 8 -->
+                    <button type="button" class="tap-zone" data-go-flow="entrenamiento" data-page="8"
+                            style="left:3%;right:3%;top:84%;height:14%;border-radius:14px"
+                            onclick="window._goFlow && window._goFlow('entrenamiento',8)"
+                            aria-label="Abrir Body Tone"></button>
+                  </div>
+                </div>
+
+                <!-- Page 8 → page 10 directo (page 9 "Rutina · Nivel 3" eliminada). -->
+                <div class="flow-page scroll" data-page="8">
+                  <div class="scroll-img">
+                    <img class="bg" src="stitched/entrenamiento/buscar/b8.jpg" alt="">
+                    <button type="button" class="tap-zone" data-go-flow="entrenamiento" data-page="10"
+                            style="left:3%;right:3%;top:22%;height:9%;border-radius:14px"
+                            onclick="window._goFlow && window._goFlow('entrenamiento',10)"
+                            aria-label="Abrir Mi entreno · Sesión 1"></button>
+                  </div>
+                </div>
+
+                <div class="flow-page scroll" data-page="10">
+                  <div class="scroll-img">
+                    <img class="bg" src="stitched/entrenamiento/buscar/b10.jpg" alt="">
+                    <button type="button" class="tap-zone" data-go-flow="entrenamiento" data-page="11"
+                            style="left:8%;width:50%;top:51%;height:3.5%;border-radius:8px"
+                            onclick="window._goFlow && window._goFlow('entrenamiento',11)"
+                            aria-label="Ver detalles del clúster"></button>
+                    <button type="button" class="tap-zone" data-go-flow="entrenamiento" data-page="12"
+                            style="left:3%;right:3%;bottom:1%;height:5%;border-radius:30px"
+                            onclick="window._goFlow && window._goFlow('entrenamiento',12)"
+                            aria-label="Finalizar sesión"></button>
+                  </div>
+                </div>
+
+                <div class="flow-page scroll" data-page="11">
+                  <div class="scroll-img">
+                    <img class="bg" src="stitched/entrenamiento/buscar/b11.jpg" alt="">
+                    <button type="button" class="tap-zone" data-go-flow="entrenamiento" data-page="12"
+                            style="left:53%;right:3%;bottom:1%;height:5%;border-radius:30px"
+                            onclick="window._goFlow && window._goFlow('entrenamiento',12)"
+                            aria-label="Validar"></button>
+                    <button type="button" class="tap-zone" data-go-flow="entrenamiento" data-page="10"
+                            style="left:3%;width:44%;bottom:1%;height:5%;border-radius:30px"
+                            onclick="window._goFlow && window._goFlow('entrenamiento',10)"
+                            aria-label="Cancelar"></button>
+                  </div>
+                </div>
+
+                <div class="flow-page" data-page="12">
+                  <img src="stitched/entrenamiento/buscar/b12.jpg" alt="">
+                  <button type="button" class="tap-zone" data-go-flow="entrenamiento" data-page="13"
+                          style="left:5%;right:5%;top:77%;height:6%;border-radius:30px"
+                          onclick="window._goFlow && window._goFlow('entrenamiento',13)"
+                          aria-label="Sí, validar todos"></button>
+                  <button type="button" class="tap-zone" data-go-flow="entrenamiento" data-page="13"
+                          style="left:5%;right:5%;top:84%;height:6%;border-radius:30px"
+                          onclick="window._goFlow && window._goFlow('entrenamiento',13)"
+                          aria-label="No, finalizar sin validarlos"></button>
+                  <button type="button" class="tap-zone" data-go-flow="entrenamiento" data-page="10"
+                          style="left:5%;right:5%;top:91%;height:6%;border-radius:30px"
+                          onclick="window._goFlow && window._goFlow('entrenamiento',10)"
+                          aria-label="Continuar con la sesión"></button>
+                </div>
+
+                <div class="flow-page" data-page="13">
+                  <img src="stitched/entrenamiento/buscar/b13.jpg" alt="">
+                  <button type="button" class="tap-zone" data-go-flow="entrenamiento" data-page="14"
+                          style="left:5%;right:5%;top:55%;height:14%;border-radius:18px"
+                          onclick="window._goFlow && window._goFlow('entrenamiento',14)"
+                          aria-label="Valorar entrenamiento"></button>
+                </div>
+
+                <div class="flow-page scroll" data-page="14">
+                  <div class="scroll-img">
+                    <img class="bg" src="stitched/entrenamiento/buscar/b14.jpg" alt="">
+                    <button type="button" class="tap-zone" data-go-flow="entrenamiento" data-page="15"
+                            style="left:3%;right:3%;top:61%;height:9%;border-radius:14px"
+                            onclick="window._goFlow && window._goFlow('entrenamiento',15)"
+                            aria-label="Abrir Sesión 2"></button>
+                  </div>
+                </div>
+
+                <div class="flow-page scroll" data-page="15">
+                  <div class="scroll-img">
+                    <img class="bg" src="stitched/entrenamiento/buscar/b15.jpg" alt="">
+                    <button type="button" class="tap-zone" data-go-flow="hoy"
+                            style="left:0;width:14%;top:5%;height:6%;border-radius:30px"
+                            onclick="window._goFlow && window._goFlow('hoy')"
+                            aria-label="Volver"></button>
+                    <!-- Botón "Finalizar sesión" naranja (y 92.7%-98.2%) → catálogo (page 6) -->
+                    <button type="button" class="tap-zone" data-go-flow="entrenamiento" data-page="6"
+                            style="left:3%;right:3%;top:92%;height:7%;border-radius:30px"
+                            onclick="window._goFlow && window._goFlow('entrenamiento',6)"
+                            aria-label="Finalizar sesión"></button>
+                  </div>
+                </div>
+
+                <!-- ===== RUTA CREAR (17-24) =====
+                     Page 16 (intro Wizard) eliminada: el bottom-sheet de page 1
+                     ("Crear nuevo entrenamiento") salta directo a page 17. -->
+
+                <!-- p17: "Añadir" lista de ejercicios — screenshots Android reales.
+                     Estado inicial c-add-0.jpg: 3 primeros toggles OFF + CTA greyed.
+                     Cada tap-zone cambia la imagen al estado N (cumulativo: 1, 1+2, 1+2+3).
+                     Re-tap del nivel actual desactiva todo y vuelve a estado 0. -->
+                <!-- Nota: el pill "Fuerza" del header sigue filled porque ningún screenshot
+                     del flujo Crear lo muestra en outline. Si quieres ese estado, hace falta
+                     un screenshot extra de la app con un filtro distinto seleccionado. -->
+                <div class="flow-page scroll" data-page="17">
+                  <div class="scroll-img">
+                    <img id="p17-img" class="bg" src="stitched/entrenamiento/crear/c-add-0.jpg" alt="">
+
+                    <!-- Toggle 1 · Área Peso Libre o Funcional (y centro ≈ 50.8%) -->
+                    <button type="button" class="tap-zone"
+                            style="left:78%;right:3%;top:48%;height:6%;border-radius:30px"
+                            onclick="window._setAddState && window._setAddState(1)"
+                            aria-label="Seleccionar Área Peso Libre o Funcional"></button>
+
+                    <!-- Toggle 2 · Elevación de pierna alternativa en plancha (y ≈ 64.4%) -->
+                    <button type="button" class="tap-zone"
+                            style="left:78%;right:3%;top:61.5%;height:6%;border-radius:30px"
+                            onclick="window._setAddState && window._setAddState(2)"
+                            aria-label="Seleccionar Elevación de pierna alternativa"></button>
+
+                    <!-- Toggle 3 · Parabrisas abdominal con foam (y ≈ 77.7%) -->
+                    <button type="button" class="tap-zone"
+                            style="left:78%;right:3%;top:74.7%;height:6%;border-radius:30px"
+                            onclick="window._setAddState && window._setAddState(3)"
+                            aria-label="Seleccionar Parabrisas abdominal con foam"></button>
+
+                    <!-- CTA naranja "Añadir seleccionados" (incluido en el screenshot) -->
+                    <button type="button" class="tap-zone"
+                            style="left:3%;right:3%;bottom:1%;height:5%;border-radius:30px"
+                            onclick="window._goFlow && window._goFlow('entrenamiento',18)"
+                            aria-label="Añadir seleccionados"></button>
+                  </div>
+                </div>
+
+                <div class="flow-page scroll" data-page="18">
+                  <div class="scroll-img">
+                    <img class="bg" src="stitched/entrenamiento/crear/c5.jpg" alt="">
+                    <button type="button" class="tap-zone" data-go-flow="entrenamiento" data-page="19"
+                            style="left:3%;width:44%;bottom:1%;height:5%;border-radius:30px"
+                            onclick="window._goFlow && window._goFlow('entrenamiento',19)"
+                            aria-label="Opciones"></button>
+                    <button type="button" class="tap-zone" data-go-flow="entrenamiento" data-page="20"
+                            style="left:53%;right:3%;bottom:1%;height:5%;border-radius:30px"
+                            onclick="window._goFlow && window._goFlow('entrenamiento',20)"
+                            aria-label="Finalizar"></button>
+                  </div>
+                </div>
+
+                <div class="flow-page" data-page="19">
+                  <img src="stitched/entrenamiento/crear/c6.jpg" alt="">
+                  <button type="button" class="tap-zone" data-go-flow="entrenamiento" data-page="20"
+                          style="left:3%;right:3%;top:91%;height:6%;border-radius:14px"
+                          onclick="window._goFlow && window._goFlow('entrenamiento',20)"
+                          aria-label="Cancelar sesión"></button>
+                  <button type="button" class="tap-zone" data-go-flow="entrenamiento" data-page="18"
+                          style="left:0;right:0;top:0;height:50%;border-radius:0"
+                          onclick="window._goFlow && window._goFlow('entrenamiento',18)"
+                          aria-label="Cerrar opciones"></button>
+                </div>
+
+                <!-- p20: Guardar sesión con nombre escrito.
+                     Único botón clicable: "Guardar y continuar" (orange filled, y 80.4%-85.9%). -->
+                <div class="flow-page scroll" data-page="20">
+                  <div class="scroll-img">
+                    <img class="bg" src="stitched/entrenamiento/crear/c8.jpg" alt="">
+                    <button type="button" class="tap-zone" data-go-flow="entrenamiento" data-page="21"
+                            style="left:3%;right:3%;top:80%;height:6.5%;border-radius:30px"
+                            onclick="window._goFlow && window._goFlow('entrenamiento',21)"
+                            aria-label="Guardar y continuar"></button>
+                  </div>
+                </div>
+
+                <!-- p21: Mi entrenamiento · Sesión 1 validada (toda en verde).
+                     Tap sobre el card Clúster (Calentamiento) abre Detalle clúster (page 22). -->
+                <div class="flow-page scroll" data-page="21">
+                  <div class="scroll-img">
+                    <img class="bg" src="stitched/entrenamiento/crear/c9.jpg" alt="">
+                    <button type="button" class="tap-zone" data-go-flow="hoy"
+                            style="left:0;width:14%;top:5%;height:6%;border-radius:30px"
+                            onclick="window._goFlow && window._goFlow('hoy')"
+                            aria-label="Volver"></button>
+                    <!-- Card Clúster Calentamiento (y ~41%-63%, incluye "Ver detalles") → page 22 -->
+                    <button type="button" class="tap-zone" data-go-flow="entrenamiento" data-page="22"
+                            style="left:3%;right:3%;top:41%;height:23%;border-radius:14px"
+                            onclick="window._goFlow && window._goFlow('entrenamiento',22)"
+                            aria-label="Abrir detalle clúster"></button>
+                  </div>
+                </div>
+
+                <!-- p22: Detalle clúster (clon de b11). Validar → p23, Cancelar → vuelve a 21. -->
+                <div class="flow-page scroll" data-page="22">
+                  <div class="scroll-img">
+                    <img class="bg" src="stitched/entrenamiento/buscar/b11.jpg" alt="">
+                    <button type="button" class="tap-zone" data-go-flow="entrenamiento" data-page="23"
+                            style="left:53%;right:3%;bottom:1%;height:5%;border-radius:30px"
+                            onclick="window._goFlow && window._goFlow('entrenamiento',23)"
+                            aria-label="Validar"></button>
+                    <button type="button" class="tap-zone" data-go-flow="entrenamiento" data-page="21"
+                            style="left:3%;width:44%;bottom:1%;height:5%;border-radius:30px"
+                            onclick="window._goFlow && window._goFlow('entrenamiento',21)"
+                            aria-label="Cancelar"></button>
+                  </div>
+                </div>
+
+                <!-- p23: Modal Cuidado (clon de b12). Sí/No validar todos → p24. -->
+                <div class="flow-page" data-page="23">
+                  <img src="stitched/entrenamiento/buscar/b12.jpg" alt="">
+                  <button type="button" class="tap-zone" data-go-flow="entrenamiento" data-page="24"
+                          style="left:5%;right:5%;top:77%;height:6%;border-radius:30px"
+                          onclick="window._goFlow && window._goFlow('entrenamiento',24)"
+                          aria-label="Sí, validar todos"></button>
+                  <button type="button" class="tap-zone" data-go-flow="entrenamiento" data-page="24"
+                          style="left:5%;right:5%;top:84%;height:6%;border-radius:30px"
+                          onclick="window._goFlow && window._goFlow('entrenamiento',24)"
+                          aria-label="No, finalizar sin validarlos"></button>
+                  <button type="button" class="tap-zone" data-go-flow="entrenamiento" data-page="22"
+                          style="left:5%;right:5%;top:91%;height:6%;border-radius:30px"
+                          onclick="window._goFlow && window._goFlow('entrenamiento',22)"
+                          aria-label="Continuar con la sesión"></button>
+                </div>
+
+                <!-- p24: Modal Recompensa (clon de b13). Valorar entrenamiento → 'hoy'. -->
+                <div class="flow-page" data-page="24">
+                  <img src="stitched/entrenamiento/buscar/b13.jpg" alt="">
+                  <button type="button" class="tap-zone" data-go-flow="hoy"
+                          style="left:5%;right:5%;top:55%;height:14%;border-radius:18px"
+                          onclick="window._goFlow && window._goFlow('hoy')"
+                          aria-label="Valorar entrenamiento"></button>
+                </div>
+
+                <button class="flow-back" aria-label="Volver">
+                  <svg viewBox="0 0 24 24"><polyline points="15 6 9 12 15 18"/></svg>
+                </button>
+              </div>
+            </section>
+
+            <!-- ===== DIETA (interactiva) =====
+                 Cada comida tiene un toggle clickable encima del marcador naranja
+                 baked-in. Al desactivar una comida, sus Kcal se restan del contador
+                 dinámico de "Llevas consumidas". -->
+            <section class="view" data-id="dieta">
+              <div class="flow" id="flow-dieta">
+                <div class="flow-page scroll active" data-page="1">
+                  <div class="scroll-img">
+                    <img class="bg" src="stitched/dieta/dieta-completa.jpg" alt="">
+
+                    <!-- Contador dinámico (cubre el "2500 Kcal." baked-in: y=1103-1176, 19.05-20.31%) -->
+                    <div class="dieta-counter" style="top:18.7%;height:2.1%">
+                      <span id="dieta-kcal">2525</span>&nbsp;Kcal.
+                    </div>
+
+                    <!-- 6 capas dim (una por comida) — sólo visibles cuando OFF -->
+                    <div class="dieta-meal-dim" data-meal="0" style="left:3%;right:3%;top:39.4%;height:7%"></div>
+                    <div class="dieta-meal-dim" data-meal="1" style="left:3%;right:3%;top:50.95%;height:7%"></div>
+                    <div class="dieta-meal-dim" data-meal="2" style="left:3%;right:3%;top:61.3%;height:7%"></div>
+                    <div class="dieta-meal-dim" data-meal="3" style="left:3%;right:3%;top:72.85%;height:7%"></div>
+                    <div class="dieta-meal-dim" data-meal="4" style="left:3%;right:3%;top:85%;height:7%"></div>
+                    <div class="dieta-meal-dim" data-meal="5" style="left:3%;right:3%;top:96.55%;height:7%"></div>
+
+                    <!-- 6 toggles redondos encima del dot naranja baked-in.
+                         x_center 16.6% (PIL), y_centers 37.91 / 49.46 / 59.78 / 71.33 / 83.51 / 95.06 -->
+                    <button type="button" class="dieta-tog" data-meal="0" data-kcal="465"
+                            style="left:16.6%;top:37.91%;width:4.5%;height:0.95%"
+                            aria-label="Toggle Desayuno"></button>
+                    <button type="button" class="dieta-tog" data-meal="1" data-kcal="210"
+                            style="left:16.6%;top:49.46%;width:4.5%;height:0.95%"
+                            aria-label="Toggle Pre-entreno"></button>
+                    <button type="button" class="dieta-tog" data-meal="2" data-kcal="360"
+                            style="left:16.6%;top:59.78%;width:4.5%;height:0.95%"
+                            aria-label="Toggle Post-entreno"></button>
+                    <button type="button" class="dieta-tog" data-meal="3" data-kcal="745"
+                            style="left:16.6%;top:71.33%;width:4.5%;height:0.95%"
+                            aria-label="Toggle Almuerzo"></button>
+                    <button type="button" class="dieta-tog" data-meal="4" data-kcal="330"
+                            style="left:16.6%;top:83.51%;width:4.5%;height:0.95%"
+                            aria-label="Toggle Merienda"></button>
+                    <button type="button" class="dieta-tog" data-meal="5" data-kcal="415"
+                            style="left:16.6%;top:95.06%;width:4.5%;height:0.95%"
+                            aria-label="Toggle Cena"></button>
+
+                    <!-- Back arrow -->
+                    <button type="button" class="tap-zone" data-go-flow="hoy"
+                            style="left:0;width:14%;top:0.5%;height:3.5%;border-radius:30px"
+                            onclick="window._goFlow && window._goFlow('hoy')"
+                            aria-label="Volver"></button>
+                  </div>
+                </div>
+
+                <button class="flow-back" aria-label="Volver">
+                  <svg viewBox="0 0 24 24"><polyline points="15 6 9 12 15 18"/></svg>
+                </button>
+              </div>
+            </section>
+
+            <!-- ===== REWARDS ===== -->
+            <section class="view" data-id="rewards">
+              <div class="flow" id="flow-rewards">
+
+                <!-- p1: Rewards principal · 26 pts, Recompensas (2 cards horizontales), Invita y gana CTA -->
+                <div class="flow-page scroll active" data-page="1">
+                  <div class="scroll-img">
+                    <img class="bg" src="stitched/rewards/r1.jpg" alt="">
+                    <!-- Back arrow -> Hoy -->
+                    <button type="button" class="tap-zone" data-go-flow="hoy"
+                            style="left:0;width:14%;top:0.5%;height:3.5%;border-radius:30px"
+                            onclick="window._goFlow && window._goFlow('hoy')"
+                            aria-label="Volver"></button>
+                    <!-- "Ver todo" en cabecera Recompensas -> p4 listado completo -->
+                    <button type="button" class="tap-zone" data-go-flow="rewards" data-page="4"
+                            style="left:72%;right:3%;top:30.5%;height:4%;border-radius:8px"
+                            onclick="window._goFlow && window._goFlow('rewards',4)"
+                            aria-label="Ver todo recompensas"></button>
+                    <!-- Card derecha "Báscula bioimpedancia" (en cards horizontales) -> p5 detalle solicitada -->
+                    <button type="button" class="tap-zone" data-go-flow="rewards" data-page="5"
+                            style="left:50%;right:3%;top:35.5%;height:23%;border-radius:14px"
+                            onclick="window._goFlow && window._goFlow('rewards',5)"
+                            aria-label="Detalle Báscula bioimpedancia"></button>
+                    <!-- Pill naranja "Compartir invitación" (y 71.6%-77.5%) -> p2 share sheet -->
+                    <button type="button" class="tap-zone" data-go-flow="rewards" data-page="2"
+                            style="left:7%;right:7%;top:71%;height:7%;border-radius:50px"
+                            onclick="window._goFlow && window._goFlow('rewards',2)"
+                            aria-label="Compartir invitación"></button>
+                  </div>
+                </div>
+
+                <!-- p2: Sheet Android Compartir con URL rewards.trainingym.com/t/m/PNnOxw/Superso... -->
+                <div class="flow-page scroll" data-page="2">
+                  <div class="scroll-img">
+                    <img class="bg" src="stitched/rewards/r2.jpg" alt="">
+                    <!-- Cerrar sheet (X arriba izquierda) -> volver a p1 -->
+                    <button type="button" class="tap-zone" data-go-flow="rewards" data-page="1"
+                            style="left:0;width:14%;top:42%;height:5%;border-radius:30px"
+                            onclick="window._goFlow && window._goFlow('rewards',1)"
+                            aria-label="Cerrar sheet"></button>
+                    <!-- Cualquier opción de compartir -> abre la landing en Chrome (p3) -->
+                    <button type="button" class="tap-zone" data-go-flow="rewards" data-page="3"
+                            style="left:0;width:100%;top:55%;height:35%"
+                            onclick="window._goFlow && window._goFlow('rewards',3)"
+                            aria-label="Abrir landing externa"></button>
+                  </div>
+                </div>
+
+                <!-- p3: Landing externa rewards.trainingym.com (form Datos básicos) -->
+                <div class="flow-page scroll" data-page="3">
+                  <div class="scroll-img">
+                    <img class="bg" src="stitched/rewards/r3.jpg" alt="">
+                    <!-- Botón home Chrome (arriba izquierda) -> volver a R (Rewards principal) -->
+                    <button type="button" class="tap-zone" data-go-flow="rewards" data-page="1"
+                            style="left:0;width:14%;top:0.5%;height:6%;border-radius:30px"
+                            onclick="window._goFlow && window._goFlow('rewards',1)"
+                            aria-label="Volver a Rewards"></button>
+                  </div>
+                </div>
+
+                <!-- p4: Listado completo de recompensas (7 cards verticales · stitched 4+5) -->
+                <div class="flow-page scroll" data-page="4">
+                  <div class="scroll-img">
+                    <img class="bg" src="stitched/rewards/r4.jpg" alt="">
+                    <!-- Back arrow -> p1 (Rewards principal) -->
+                    <button type="button" class="tap-zone" data-go-flow="rewards" data-page="1"
+                            style="left:0;width:14%;top:0.3%;height:3.2%;border-radius:30px"
+                            onclick="window._goFlow && window._goFlow('rewards',1)"
+                            aria-label="Volver a Rewards"></button>
+                    <!-- Card 2: Báscula bioimpedancia (y 19.9%-30.9% en r4) -> p5 detalle solicitada -->
+                    <button type="button" class="tap-zone" data-go-flow="rewards" data-page="5"
+                            style="left:3%;right:3%;top:19.9%;height:11%;border-radius:14px"
+                            onclick="window._goFlow && window._goFlow('rewards',5)"
+                            aria-label="Detalle Báscula bioimpedancia"></button>
+                  </div>
+                </div>
+
+                <!-- p5: Detalle Báscula con toast "Recompensa solicitada correctamente" -->
+                <div class="flow-page scroll" data-page="5">
+                  <div class="scroll-img">
+                    <img class="bg" src="stitched/rewards/r5.jpg" alt="">
+                    <!-- Back arrow -> p4 listado -->
+                    <button type="button" class="tap-zone" data-go-flow="rewards" data-page="4"
+                            style="left:0;width:14%;top:0.5%;height:3.5%;border-radius:30px"
+                            onclick="window._goFlow && window._goFlow('rewards',4)"
+                            aria-label="Volver al listado"></button>
+                    <!-- Cancelar recompensa CTA -> volver al listado -->
+                    <button type="button" class="tap-zone" data-go-flow="rewards" data-page="4"
+                            style="left:7%;right:7%;top:91%;height:6%;border-radius:50px"
+                            onclick="window._goFlow && window._goFlow('rewards',4)"
+                            aria-label="Cancelar recompensa"></button>
+                  </div>
+                </div>
+
+                <button class="flow-back" aria-label="Volver">
+                  <svg viewBox="0 0 24 24"><polyline points="15 6 9 12 15 18"/></svg>
+                </button>
+              </div>
+            </section>
+
+            <!-- ===== PESAJE BÁSCULAS ===== -->
+            <section class="view" data-id="pesaje">
+              <div class="flow" id="flow-pesaje">
+
+                <!-- p1: Bottom-sheet Composición corporal sobre Hoy (backdrop) -->
+                <div class="flow-page active" data-page="1">
+                  <img src="stitched/composicion/c1.jpg" alt="">
+                  <!-- CTA naranja "Realizar nuevo pesaje" -> p3 detalle datos -->
+                  <button type="button" class="tap-zone" data-go-flow="pesaje" data-page="3"
+                          style="left:5%;right:5%;top:82%;height:6.5%;border-radius:50px"
+                          onclick="window._goFlow && window._goFlow('pesaje',3)"
+                          aria-label="Realizar nuevo pesaje"></button>
+                  <!-- CTA outline "Ver histórico de pesajes" -> p2 mis pesajes -->
+                  <button type="button" class="tap-zone" data-go-flow="pesaje" data-page="2"
+                          style="left:5%;right:5%;top:90%;height:6.5%;border-radius:50px"
+                          onclick="window._goFlow && window._goFlow('pesaje',2)"
+                          aria-label="Ver histórico de pesajes"></button>
+                  <!-- Tap en zona oscurecida (parte alta) -> cierra el sheet y vuelve a Hoy -->
+                  <button type="button" class="tap-zone" data-go-flow="hoy"
+                          style="left:0;right:0;top:0;height:25%"
+                          onclick="window._goFlow && window._goFlow('hoy')"
+                          aria-label="Cerrar sheet"></button>
+                </div>
+
+                <!-- p2: Mis pesajes (gráfica + lista de fechas) -->
+                <div class="flow-page scroll" data-page="2">
+                  <div class="scroll-img">
+                    <img class="bg" src="stitched/composicion/c2.jpg" alt="">
+                    <!-- Back arrow -> Hoy -->
+                    <button type="button" class="tap-zone" data-go-flow="hoy"
+                            style="left:0;width:14%;top:5%;height:5%;border-radius:30px"
+                            onclick="window._goFlow && window._goFlow('hoy')"
+                            aria-label="Volver"></button>
+                    <!-- Row 04/05/2026 (101 kg) -> p3 detalle -->
+                    <button type="button" class="tap-zone" data-go-flow="pesaje" data-page="3"
+                            style="left:3%;right:3%;top:69%;height:8%;border-radius:14px"
+                            onclick="window._goFlow && window._goFlow('pesaje',3)"
+                            aria-label="Detalle pesaje 04/05/2026"></button>
+                    <!-- Row 02/03/2026 (108 kg) -> p3 detalle -->
+                    <button type="button" class="tap-zone" data-go-flow="pesaje" data-page="3"
+                            style="left:3%;right:3%;top:78%;height:8%;border-radius:14px"
+                            onclick="window._goFlow && window._goFlow('pesaje',3)"
+                            aria-label="Detalle pesaje 02/03/2026"></button>
+                    <!-- Row 01/01/2026 (112 kg) -> p3 detalle -->
+                    <button type="button" class="tap-zone" data-go-flow="pesaje" data-page="3"
+                            style="left:3%;right:3%;top:87%;height:8%;border-radius:14px"
+                            onclick="window._goFlow && window._goFlow('pesaje',3)"
+                            aria-label="Detalle pesaje 01/01/2026"></button>
+                  </div>
+                </div>
+
+                <!-- p3: Detalle pesaje · tab "Datos obtenidos" activo (101 kg + 9 cards)
+                     PIL detectó 2 bandas naranjas: la barra Músculo (y=1148, 31.74%) y
+                     el indicador del tab activo (y=1548, 42.80%, ancho 609px = mitad izq).
+                     Hotspot del tab "Estado físico" cubre 40-44%. -->
+                <div class="flow-page scroll" data-page="3">
+                  <div class="scroll-img">
+                    <img class="bg" src="stitched/composicion/c3.jpg" alt="">
+                    <!-- Back arrow -> p2 mis pesajes -->
+                    <button type="button" class="tap-zone" data-go-flow="pesaje" data-page="2"
+                            style="left:0;width:14%;top:1.5%;height:3%;border-radius:30px"
+                            onclick="window._goFlow && window._goFlow('pesaje',2)"
+                            aria-label="Volver a Mis pesajes"></button>
+                    <!-- Tab "Estado físico" (lado derecho del switcher de tabs) -> p4 -->
+                    <button type="button" class="tap-zone" data-go-flow="pesaje" data-page="4"
+                            style="left:50%;width:50%;top:40%;height:4%"
+                            onclick="window._goFlow && window._goFlow('pesaje',4)"
+                            aria-label="Ver Estado físico"></button>
+                  </div>
+                </div>
+
+                <!-- p4: Detalle pesaje · tab "Estado físico" activo (5 cards con barras)
+                     PIL: barra Músculo en y=244 (7.78%) y indicador del tab activo en
+                     y=642 (20.46%, ancho 609px = mitad derecha = "Estado físico").
+                     Hotspot del tab "Datos obtenidos" cubre 17-21%. -->
+                <div class="flow-page scroll" data-page="4">
+                  <div class="scroll-img">
+                    <img class="bg" src="stitched/composicion/c4.jpg" alt="">
+                    <!-- Back arrow -> p2 mis pesajes -->
+                    <button type="button" class="tap-zone" data-go-flow="pesaje" data-page="2"
+                            style="left:0;width:14%;top:1.5%;height:3%;border-radius:30px"
+                            onclick="window._goFlow && window._goFlow('pesaje',2)"
+                            aria-label="Volver a Mis pesajes"></button>
+                    <!-- Tab "Datos obtenidos" (lado izquierdo del switcher) -> p3 -->
+                    <button type="button" class="tap-zone" data-go-flow="pesaje" data-page="3"
+                            style="left:0;width:50%;top:17%;height:4%"
+                            onclick="window._goFlow && window._goFlow('pesaje',3)"
+                            aria-label="Ver Datos obtenidos"></button>
+                  </div>
+                </div>
+
+                <button class="flow-back" aria-label="Volver">
+                  <svg viewBox="0 0 24 24"><polyline points="15 6 9 12 15 18"/></svg>
+                </button>
+              </div>
+            </section>
+
+            <!-- ===== DIETAS PERSONALIZADAS =====
+                 1 página: plan de dieta equilibrada (infografía con header Trainingym). -->
+            <section class="view" data-id="dietas-personalizadas">
+              <div class="flow" id="flow-dietas-personalizadas">
+
+                <div class="flow-page scroll active" data-page="1">
+                  <div class="scroll-img">
+                    <img class="bg" src="stitched/dietas/plan-dieta.jpg" alt="">
+                    <!-- Back arrow → vuelve al origen (perfil) -->
+                    <button type="button" class="tap-zone" data-go-flow="hoy"
+                            style="left:0;width:14%;top:5%;height:6%;border-radius:30px"
+                            onclick="window._goFlow && window._goFlow('hoy')"
+                            aria-label="Volver"></button>
+                  </div>
+                </div>
+
+                <button class="flow-back" aria-label="Volver">
+                  <svg viewBox="0 0 24 24"><polyline points="15 6 9 12 15 18"/></svg>
+                </button>
+              </div>
+            </section>
+
+            <!-- ===== QR ACCESO =====
+                 3 páginas mockup (no hay screenshots reales, generadas con PIL):
+                 main (2 opciones) → mostrar QR / escanear cámara. -->
+            <section class="view" data-id="qr-acceso">
+              <div class="flow" id="flow-qr-acceso">
+
+                <!-- p1: Main · 2 opciones (Mostrar mi QR / Escanear código) -->
+                <div class="flow-page active" data-page="1">
+                  <img src="stitched/qr-acceso/main.jpg" alt="">
+                  <!-- Back arrow → vuelve al origen (perfil) -->
+                  <button type="button" class="tap-zone" data-go-flow="hoy"
+                          style="left:0;width:14%;top:4%;height:5%;border-radius:30px"
+                          onclick="window._goFlow && window._goFlow('hoy')"
+                          aria-label="Volver"></button>
+                  <!-- Card 1 "Mostrar mi QR" (y≈400-740 = 15.5-28.7%) → p2 -->
+                  <button type="button" class="tap-zone" data-go-flow="qr-acceso" data-page="2"
+                          style="left:5%;right:5%;top:15.5%;height:13.5%;border-radius:24px"
+                          onclick="window._goFlow && window._goFlow('qr-acceso',2)"
+                          aria-label="Mostrar mi QR"></button>
+                  <!-- Card 2 "Escanear código" (y≈800-1140 = 31-44.2%) → p3 -->
+                  <button type="button" class="tap-zone" data-go-flow="qr-acceso" data-page="3"
+                          style="left:5%;right:5%;top:31%;height:13.5%;border-radius:24px"
+                          onclick="window._goFlow && window._goFlow('qr-acceso',3)"
+                          aria-label="Escanear código QR"></button>
+                </div>
+
+                <!-- p2: Mostrar mi QR — QR ejemplo en el centro -->
+                <div class="flow-page" data-page="2">
+                  <img src="stitched/qr-acceso/mostrar.jpg" alt="">
+                  <!-- Back arrow → p1 -->
+                  <button type="button" class="tap-zone" data-go-flow="qr-acceso" data-page="1"
+                          style="left:0;width:14%;top:4%;height:5%;border-radius:30px"
+                          onclick="window._goFlow && window._goFlow('qr-acceso',1)"
+                          aria-label="Volver"></button>
+                  <!-- "Cerrar" CTA naranja (y≈1780-1890 = 68.9-73.2%) → p1 -->
+                  <button type="button" class="tap-zone" data-go-flow="qr-acceso" data-page="1"
+                          style="left:8%;right:8%;top:69%;height:4.5%;border-radius:50px"
+                          onclick="window._goFlow && window._goFlow('qr-acceso',1)"
+                          aria-label="Cerrar"></button>
+                </div>
+
+                <!-- p3: Escanear código — frame de cámara con + -->
+                <div class="flow-page" data-page="3">
+                  <img src="stitched/qr-acceso/escanear.jpg" alt="">
+                  <!-- Back arrow → p1 -->
+                  <button type="button" class="tap-zone" data-go-flow="qr-acceso" data-page="1"
+                          style="left:0;width:14%;top:4%;height:5%;border-radius:30px"
+                          onclick="window._goFlow && window._goFlow('qr-acceso',1)"
+                          aria-label="Volver"></button>
+                </div>
+
+                <button class="flow-back" aria-label="Volver">
+                  <svg viewBox="0 0 24 24"><polyline points="15 6 9 12 15 18"/></svg>
+                </button>
+              </div>
+            </section>
+
+            <!-- ===== CARTERA =====
+                 7 páginas: catálogo de suscripciones → detalles del pago →
+                 dropdown método → tarjeta seleccionada → confirmar habilitado →
+                 modal compra OK → cartera final con suscripciones del usuario. -->
+            <section class="view" data-id="cartera">
+              <div class="flow" id="flow-cartera">
+
+                <!-- p1: Catálogo Suscripciones (stitched 1220x4605) -->
+                <div class="flow-page scroll active" data-page="1">
+                  <div class="scroll-img">
+                    <img class="bg" src="stitched/cartera/catalogo.jpg" alt="">
+                    <!-- Back arrow (<) → vuelve al origen. PIL: y=241-274 source / 4605 = 5.23-5.95% -->
+                    <button type="button" class="tap-zone" data-go-flow="hoy"
+                            style="left:0;width:14%;top:4.8%;height:1.8%;border-radius:30px"
+                            onclick="window._goFlow && window._goFlow('hoy')"
+                            aria-label="Volver"></button>
+                    <!-- "Empieza ahora" CTA naranja (Plan Essential, PIL: y=1829-1948 = 39.72-42.30%) → p2 -->
+                    <button type="button" class="tap-zone" data-go-flow="cartera" data-page="2"
+                            style="left:5%;right:5%;top:39.7%;height:2.7%;border-radius:30px"
+                            onclick="window._goFlow && window._goFlow('cartera',2)"
+                            aria-label="Empieza ahora Plan Essential"></button>
+                  </div>
+                </div>
+
+                <!-- p2: Detalles del pago (stitched 1220x3784) -->
+                <div class="flow-page scroll" data-page="2">
+                  <div class="scroll-img">
+                    <img class="bg" src="stitched/cartera/pago.jpg" alt="">
+                    <!-- Back arrow → p1 catálogo. PIL: y=241-274 source / 3784 = 6.37-7.24% -->
+                    <button type="button" class="tap-zone" data-go-flow="cartera" data-page="1"
+                            style="left:0;width:14%;top:6%;height:2.1%;border-radius:30px"
+                            onclick="window._goFlow && window._goFlow('cartera',1)"
+                            aria-label="Volver al catálogo"></button>
+                    <!-- Dropdown "Selecciona el método de pago" (estimado y≈78-83%) → p3 -->
+                    <button type="button" class="tap-zone" data-go-flow="cartera" data-page="3"
+                            style="left:5%;right:5%;top:78%;height:5%;border-radius:8px"
+                            onclick="window._goFlow && window._goFlow('cartera',3)"
+                            aria-label="Abrir métodos de pago"></button>
+                  </div>
+                </div>
+
+                <!-- p3: Dropdown abierto (mismo patrón que Tienda) -->
+                <div class="flow-page" data-page="3">
+                  <img src="stitched/cartera/dropdown.jpg" alt="">
+                  <!-- Tap fuera del popup → p2 -->
+                  <button type="button" class="tap-zone" data-go-flow="cartera" data-page="2"
+                          style="left:0;right:0;top:0;height:72%"
+                          onclick="window._goFlow && window._goFlow('cartera',2)"
+                          aria-label="Cerrar dropdown"></button>
+                  <!-- Item "tarjeta" (y≈76.5-81%) → p4 -->
+                  <button type="button" class="tap-zone" data-go-flow="cartera" data-page="4"
+                          style="left:5%;right:5%;top:76.5%;height:4.5%;border-radius:6px"
+                          onclick="window._goFlow && window._goFlow('cartera',4)"
+                          aria-label="Seleccionar tarjeta"></button>
+                </div>
+
+                <!-- p4: Tarjeta seleccionada -->
+                <div class="flow-page" data-page="4">
+                  <img src="stitched/cartera/tarjeta.jpg" alt="">
+                  <!-- Back arrow → p2. PIL: y=241-274 / 2582 = 9.33-10.61% -->
+                  <button type="button" class="tap-zone" data-go-flow="cartera" data-page="2"
+                          style="left:0;width:14%;top:8.8%;height:2.5%;border-radius:30px"
+                          onclick="window._goFlow && window._goFlow('cartera',2)"
+                          aria-label="Volver"></button>
+                  <!-- Checkbox "Acepto..." → p5 marcado -->
+                  <button type="button" class="tap-zone" data-go-flow="cartera" data-page="5"
+                          style="left:0;width:18%;top:82%;height:7%"
+                          onclick="window._goFlow && window._goFlow('cartera',5)"
+                          aria-label="Aceptar condiciones"></button>
+                </div>
+
+                <!-- p5: Checkbox marcado + Confirmar habilitado -->
+                <div class="flow-page" data-page="5">
+                  <img src="stitched/cartera/confirmar.jpg" alt="">
+                  <!-- Back arrow → p2. PIL: y=241-274 / 2582 = 9.33-10.61% -->
+                  <button type="button" class="tap-zone" data-go-flow="cartera" data-page="2"
+                          style="left:0;width:14%;top:8.8%;height:2.5%;border-radius:30px"
+                          onclick="window._goFlow && window._goFlow('cartera',2)"
+                          aria-label="Volver"></button>
+                  <!-- "Confirmar" CTA naranja (PIL: 83-89.5%) → p6 modal -->
+                  <button type="button" class="tap-zone" data-go-flow="cartera" data-page="6"
+                          style="left:5%;right:5%;top:83%;height:6.5%;border-radius:50px"
+                          onclick="window._goFlow && window._goFlow('cartera',6)"
+                          aria-label="Confirmar compra"></button>
+                </div>
+
+                <!-- p6: Modal "Compra realizada" -->
+                <div class="flow-page" data-page="6">
+                  <img src="stitched/cartera/modal-ok.jpg" alt="">
+                  <!-- "Entendido" CTA (PIL: 60-66%) → p7 cartera final -->
+                  <button type="button" class="tap-zone" data-go-flow="cartera" data-page="7"
+                          style="left:8%;right:8%;top:60%;height:6%;border-radius:30px"
+                          onclick="window._goFlow && window._goFlow('cartera',7)"
+                          aria-label="Entendido"></button>
+                </div>
+
+                <!-- p7: Cartera final (Mis suscripciones del usuario + Tienda) -->
+                <div class="flow-page" data-page="7">
+                  <img src="stitched/cartera/cartera-final.jpg" alt="">
+                  <!-- Back arrow → vuelve al origen. PIL: y=241-274 / 2582 = 9.33-10.61% -->
+                  <button type="button" class="tap-zone" data-go-flow="hoy"
+                          style="left:0;width:14%;top:8.8%;height:2.5%;border-radius:30px"
+                          onclick="window._goFlow && window._goFlow('hoy')"
+                          aria-label="Volver"></button>
+                </div>
+
+                <button class="flow-back" aria-label="Volver">
+                  <svg viewBox="0 0 24 24"><polyline points="15 6 9 12 15 18"/></svg>
+                </button>
+              </div>
+            </section>
+
+            <!-- ===== GYMDER =====
+                 7 páginas: home → 4 swipe cards (Martina/Marco/Alex/Noa) →
+                 podcast detail → episode player con transcript scrollable. -->
+            <section class="view" data-id="gymder">
+              <div class="flow" id="flow-gymder">
+
+                <!-- p1: Gymder home (scrollable: hero "Conecta con los tuyos" + podcast El club 3H + chats) -->
+                <div class="flow-page scroll active" data-page="1">
+                  <div class="scroll-img">
+                    <img class="bg" src="stitched/gymder/home.jpg" alt="">
+                    <!-- "Descubrir" CTA naranja en hero card → p2 swipe Martina -->
+                    <button type="button" class="tap-zone" data-go-flow="gymder" data-page="2"
+                            style="left:5%;width:30%;top:36%;height:4%;border-radius:30px"
+                            onclick="window._goFlow && window._goFlow('gymder',2)"
+                            aria-label="Descubrir personas"></button>
+                    <!-- Card podcast "Un podcast de Luis Tejedor" (col izquierda en El club de las 3H)
+                         → p6 podcast detail -->
+                    <button type="button" class="tap-zone" data-go-flow="gymder" data-page="6"
+                            style="left:3%;width:32%;top:50%;height:18%;border-radius:14px"
+                            onclick="window._goFlow && window._goFlow('gymder',6)"
+                            aria-label="Abrir podcast El club de las 3H"></button>
+                    <!-- "Ver todos" en cabecera podcast → p6 -->
+                    <button type="button" class="tap-zone" data-go-flow="gymder" data-page="6"
+                            style="left:78%;right:3%;top:43.5%;height:3.5%"
+                            onclick="window._goFlow && window._goFlow('gymder',6)"
+                            aria-label="Ver todos episodios"></button>
+                  </div>
+                </div>
+
+                <!-- p2: Discover · Martina Fernandez (Opera Gym Madrid) -->
+                <div class="flow-page" data-page="2">
+                  <img src="stitched/gymder/p1-martina.jpg" alt="">
+                  <!-- X cerrar (top-right) → p1 home -->
+                  <button type="button" class="tap-zone" data-go-flow="gymder" data-page="1"
+                          style="left:82%;width:12%;top:7%;height:5%;border-radius:50%"
+                          onclick="window._goFlow && window._goFlow('gymder',1)"
+                          aria-label="Cerrar"></button>
+                  <!-- Back arrow (top-left) → p1 -->
+                  <button type="button" class="tap-zone" data-go-flow="gymder" data-page="1"
+                          style="left:0;width:14%;top:1%;height:3%;border-radius:30px"
+                          onclick="window._goFlow && window._goFlow('gymder',1)"
+                          aria-label="Volver"></button>
+                  <!-- Right arrow (>) y Conectar CTA → p3 Marco -->
+                  <button type="button" class="tap-zone" data-go-flow="gymder" data-page="3"
+                          style="left:85%;width:13%;top:91%;height:6%;border-radius:50%"
+                          onclick="window._goFlow && window._goFlow('gymder',3)"
+                          aria-label="Siguiente persona"></button>
+                  <button type="button" class="tap-zone" data-go-flow="gymder" data-page="3"
+                          style="left:18%;right:18%;top:91%;height:6%;border-radius:30px"
+                          onclick="window._goFlow && window._goFlow('gymder',3)"
+                          aria-label="Conectar"></button>
+                </div>
+
+                <!-- p3: Discover · Marco Vidal (San Isidro Gym Lima, 20% afinidad) -->
+                <div class="flow-page" data-page="3">
+                  <img src="stitched/gymder/p2-marco.jpg" alt="">
+                  <button type="button" class="tap-zone" data-go-flow="gymder" data-page="1"
+                          style="left:82%;width:12%;top:7%;height:5%;border-radius:50%"
+                          onclick="window._goFlow && window._goFlow('gymder',1)"
+                          aria-label="Cerrar"></button>
+                  <!-- Left arrow (<) → p2 Martina -->
+                  <button type="button" class="tap-zone" data-go-flow="gymder" data-page="2"
+                          style="left:2%;width:13%;top:91%;height:6%;border-radius:50%"
+                          onclick="window._goFlow && window._goFlow('gymder',2)"
+                          aria-label="Anterior persona"></button>
+                  <!-- Right arrow → p4 Alex -->
+                  <button type="button" class="tap-zone" data-go-flow="gymder" data-page="4"
+                          style="left:85%;width:13%;top:91%;height:6%;border-radius:50%"
+                          onclick="window._goFlow && window._goFlow('gymder',4)"
+                          aria-label="Siguiente persona"></button>
+                  <button type="button" class="tap-zone" data-go-flow="gymder" data-page="4"
+                          style="left:18%;right:18%;top:91%;height:6%;border-radius:30px"
+                          onclick="window._goFlow && window._goFlow('gymder',4)"
+                          aria-label="Conectar"></button>
+                </div>
+
+                <!-- p4: Discover · Alex Rivas (San Isidro Gym Lima) -->
+                <div class="flow-page" data-page="4">
+                  <img src="stitched/gymder/p3-alex.jpg" alt="">
+                  <button type="button" class="tap-zone" data-go-flow="gymder" data-page="1"
+                          style="left:82%;width:12%;top:7%;height:5%;border-radius:50%"
+                          onclick="window._goFlow && window._goFlow('gymder',1)"
+                          aria-label="Cerrar"></button>
+                  <button type="button" class="tap-zone" data-go-flow="gymder" data-page="3"
+                          style="left:2%;width:13%;top:91%;height:6%;border-radius:50%"
+                          onclick="window._goFlow && window._goFlow('gymder',3)"
+                          aria-label="Anterior persona"></button>
+                  <button type="button" class="tap-zone" data-go-flow="gymder" data-page="5"
+                          style="left:85%;width:13%;top:91%;height:6%;border-radius:50%"
+                          onclick="window._goFlow && window._goFlow('gymder',5)"
+                          aria-label="Siguiente persona"></button>
+                  <button type="button" class="tap-zone" data-go-flow="gymder" data-page="5"
+                          style="left:18%;right:18%;top:91%;height:6%;border-radius:30px"
+                          onclick="window._goFlow && window._goFlow('gymder',5)"
+                          aria-label="Conectar"></button>
+                </div>
+
+                <!-- p5: Discover · Noa Hernández (Les Cinq Gym São Paulo) — última persona -->
+                <div class="flow-page" data-page="5">
+                  <img src="stitched/gymder/p4-noa.jpg" alt="">
+                  <button type="button" class="tap-zone" data-go-flow="gymder" data-page="1"
+                          style="left:82%;width:12%;top:7%;height:5%;border-radius:50%"
+                          onclick="window._goFlow && window._goFlow('gymder',1)"
+                          aria-label="Cerrar"></button>
+                  <!-- Left arrow → p4 Alex -->
+                  <button type="button" class="tap-zone" data-go-flow="gymder" data-page="4"
+                          style="left:2%;width:13%;top:91%;height:6%;border-radius:50%"
+                          onclick="window._goFlow && window._goFlow('gymder',4)"
+                          aria-label="Anterior persona"></button>
+                  <!-- Conectar (último) → vuelve a p1 home -->
+                  <button type="button" class="tap-zone" data-go-flow="gymder" data-page="1"
+                          style="left:18%;right:18%;top:91%;height:6%;border-radius:30px"
+                          onclick="window._goFlow && window._goFlow('gymder',1)"
+                          aria-label="Conectar"></button>
+                </div>
+
+                <!-- p6: Podcast detail "El club de las 3H" — 20 episodios listados (scrollable) -->
+                <div class="flow-page scroll" data-page="6">
+                  <div class="scroll-img">
+                    <img class="bg" src="stitched/gymder/podcast.jpg" alt="">
+                    <!-- Back arrow → p1 home -->
+                    <button type="button" class="tap-zone" data-go-flow="gymder" data-page="1"
+                            style="left:0;width:14%;top:1%;height:3%;border-radius:30px"
+                            onclick="window._goFlow && window._goFlow('gymder',1)"
+                            aria-label="Volver"></button>
+                    <!-- Episodio 1 "El deber que desnuda tu miedo" → p7 episode player -->
+                    <button type="button" class="tap-zone" data-go-flow="gymder" data-page="7"
+                            style="left:3%;right:3%;top:42%;height:9%;border-radius:14px"
+                            onclick="window._goFlow && window._goFlow('gymder',7)"
+                            aria-label="Abrir episodio El deber que desnuda tu miedo"></button>
+                  </div>
+                </div>
+
+                <!-- p7: Episode player "El deber que desnuda tu miedo" (scrollable, transcript completo) -->
+                <div class="flow-page scroll" data-page="7">
+                  <div class="scroll-img">
+                    <img class="bg" src="stitched/gymder/episode.jpg" alt="">
+                    <!-- Back arrow → p6 podcast -->
+                    <button type="button" class="tap-zone" data-go-flow="gymder" data-page="6"
+                            style="left:0;width:14%;top:0.4%;height:1.8%;border-radius:30px"
+                            onclick="window._goFlow && window._goFlow('gymder',6)"
+                            aria-label="Volver al podcast"></button>
+                  </div>
+                </div>
+
+                <button class="flow-back" aria-label="Volver">
+                  <svg viewBox="0 0 24 24"><polyline points="15 6 9 12 15 18"/></svg>
+                </button>
+              </div>
+            </section>
+
+            <!-- ===== NOTIFICACIONES =====
+                 2 páginas: lista scrollable de notificaciones → detalle (bottom-sheet
+                 sobre lista atenuada). -->
+            <section class="view" data-id="notificaciones">
+              <div class="flow" id="flow-notificaciones">
+
+                <!-- p1: Lista de notificaciones (stitched de 3 capturas, scrollable) -->
+                <div class="flow-page scroll active" data-page="1">
+                  <div class="scroll-img">
+                    <img class="bg" src="stitched/notificaciones/lista.jpg" alt="">
+                    <!-- Back arrow → vuelve al origen (centro) -->
+                    <button type="button" class="tap-zone" data-go-flow="hoy"
+                            style="left:0;width:14%;top:0.3%;height:1.6%;border-radius:30px"
+                            onclick="window._goFlow && window._goFlow('hoy')"
+                            aria-label="Volver"></button>
+                    <!-- Tap en notificación "RESET EXPERIENCE - 16 Mayo" (segundo ítem)
+                         PIL+visual: y=740-940 source = 14.18-18.02% del stitched 5216.
+                         → p2 detalle bottom-sheet -->
+                    <button type="button" class="tap-zone" data-go-flow="notificaciones" data-page="2"
+                            style="left:3%;right:3%;top:14.2%;height:3.9%;border-radius:8px"
+                            onclick="window._goFlow && window._goFlow('notificaciones',2)"
+                            aria-label="Abrir RESET EXPERIENCE"></button>
+                  </div>
+                </div>
+
+                <!-- p2: Detalle de notificación (bottom-sheet "RESET EXPERIENCE" sobre lista atenuada) -->
+                <div class="flow-page" data-page="2">
+                  <img src="stitched/notificaciones/detalle.jpg" alt="">
+                  <!-- Tap zona dim arriba → cierra el sheet y vuelve a p1 (lista) -->
+                  <button type="button" class="tap-zone" data-go-flow="notificaciones" data-page="1"
+                          style="left:0;right:0;top:0;height:45%"
+                          onclick="window._goFlow && window._goFlow('notificaciones',1)"
+                          aria-label="Cerrar sheet"></button>
+                  <!-- Back arrow → vuelve al origen (centro) -->
+                  <button type="button" class="tap-zone" data-go-flow="hoy"
+                          style="left:0;width:14%;top:1%;height:3%;border-radius:30px"
+                          onclick="window._goFlow && window._goFlow('hoy')"
+                          aria-label="Volver"></button>
+                </div>
+
+                <button class="flow-back" aria-label="Volver">
+                  <svg viewBox="0 0 24 24"><polyline points="15 6 9 12 15 18"/></svg>
+                </button>
+              </div>
+            </section>
+
+            <!-- ===== TIENDA =====
+                 8 páginas: principal → detalle → pago → dropdown → tarjeta sel →
+                 confirmar habilitado → modal compra OK → cartera. -->
+            <section class="view" data-id="tienda">
+              <div class="flow" id="flow-tienda">
+
+                <!-- p1: Tienda principal (catálogo Artículos / Combos / Créditos) -->
+                <div class="flow-page active" data-page="1">
+                  <img src="stitched/tienda/t01-principal.jpg" alt="">
+                  <!-- Back arrow → vuelve al origen (centro) -->
+                  <button type="button" class="tap-zone" data-go-flow="hoy"
+                          style="left:0;width:12%;top:1%;height:3%;border-radius:30px"
+                          onclick="window._goFlow && window._goFlow('hoy')"
+                          aria-label="Volver"></button>
+                  <!-- Producto Guantes Performance Training (PIL: imagen y=915-1197 ≈ 35-46%) -->
+                  <button type="button" class="tap-zone" data-go-flow="tienda" data-page="2"
+                          style="left:3%;width:45%;top:33%;height:25%;border-radius:14px"
+                          onclick="window._goFlow && window._goFlow('tienda',2)"
+                          aria-label="Abrir Guantes Performance Training"></button>
+                </div>
+
+                <!-- p2: Detalle producto (stitched t02+t03, scrollable 1220x3734) -->
+                <div class="flow-page scroll" data-page="2">
+                  <div class="scroll-img">
+                    <img class="bg" src="stitched/tienda/t02-detalle.jpg" alt="">
+                    <!-- Back arrow → p1 -->
+                    <button type="button" class="tap-zone" data-go-flow="tienda" data-page="1"
+                            style="left:0;width:12%;top:0.7%;height:2%;border-radius:30px"
+                            onclick="window._goFlow && window._goFlow('tienda',1)"
+                            aria-label="Volver al catálogo"></button>
+                    <!-- "Añadir al carrito" CTA naranja (PIL: y=1867-1986 ≈ 50-53%) → p3 -->
+                    <button type="button" class="tap-zone" data-go-flow="tienda" data-page="3"
+                            style="left:3%;right:3%;top:50%;height:3.4%;border-radius:30px"
+                            onclick="window._goFlow && window._goFlow('tienda',3)"
+                            aria-label="Añadir al carrito"></button>
+                  </div>
+                </div>
+
+                <!-- p3: Detalles del pago (stitched t04+t05, scrollable 1220x4054) -->
+                <div class="flow-page scroll" data-page="3">
+                  <div class="scroll-img">
+                    <img class="bg" src="stitched/tienda/t03-pago.jpg" alt="">
+                    <!-- Back arrow → p2 -->
+                    <button type="button" class="tap-zone" data-go-flow="tienda" data-page="2"
+                            style="left:0;width:12%;top:0.7%;height:2%;border-radius:30px"
+                            onclick="window._goFlow && window._goFlow('tienda',2)"
+                            aria-label="Volver al detalle"></button>
+                    <!-- Dropdown "Selecciona el método de pago" (estimado y≈79-84%) → p4 dropdown abierto -->
+                    <button type="button" class="tap-zone" data-go-flow="tienda" data-page="4"
+                            style="left:5%;right:5%;top:79%;height:5%;border-radius:8px"
+                            onclick="window._goFlow && window._goFlow('tienda',4)"
+                            aria-label="Abrir métodos de pago"></button>
+                  </div>
+                </div>
+
+                <!-- p4: Dropdown método de pago abierto (efectivo / tarjeta / Bizum / domiciliación)
+                     PIL re-detectado (con marcas visuales): popup empieza tras el input
+                     en y≈1860; ítems centrados aprox en:
+                       efectivo y≈1940 (75%) · tarjeta y≈2035 (78.8%) ·
+                       Bizum y≈2120 (82.1%) · domiciliación y≈2210 (85.6%) -->
+                <div class="flow-page" data-page="4">
+                  <img src="stitched/tienda/t04-dropdown.jpg" alt="">
+                  <!-- Tap fuera del dropdown (zona alta, hasta justo antes del popup) → vuelve a p3 -->
+                  <button type="button" class="tap-zone" data-go-flow="tienda" data-page="3"
+                          style="left:0;right:0;top:0;height:72%"
+                          onclick="window._goFlow && window._goFlow('tienda',3)"
+                          aria-label="Cerrar dropdown"></button>
+                  <!-- Item "tarjeta" (segundo del popup, y≈1985-2080 ≈ 77-80.6%) → p5 -->
+                  <button type="button" class="tap-zone" data-go-flow="tienda" data-page="5"
+                          style="left:5%;right:5%;top:76.5%;height:4.5%;border-radius:6px"
+                          onclick="window._goFlow && window._goFlow('tienda',5)"
+                          aria-label="Seleccionar tarjeta"></button>
+                </div>
+
+                <!-- p5: Tarjeta seleccionada (info azul "tarjeta" debajo del dropdown).
+                     PIL re-detectado: texto naranja "Acepto..." en y=2166-2262 (83.9-87.6%)
+                     y el checkbox vacío justo a su izquierda en la misma franja. -->
+                <div class="flow-page" data-page="5">
+                  <img src="stitched/tienda/t05-tarjeta.jpg" alt="">
+                  <!-- Back arrow → p3 -->
+                  <button type="button" class="tap-zone" data-go-flow="tienda" data-page="3"
+                          style="left:0;width:12%;top:1%;height:3%;border-radius:30px"
+                          onclick="window._goFlow && window._goFlow('tienda',3)"
+                          aria-label="Volver"></button>
+                  <!-- Checkbox "Acepto las condiciones" (alineado con el texto naranja, mitad izq) → p6 marcado -->
+                  <button type="button" class="tap-zone" data-go-flow="tienda" data-page="6"
+                          style="left:0;width:18%;top:82%;height:7%"
+                          onclick="window._goFlow && window._goFlow('tienda',6)"
+                          aria-label="Aceptar condiciones"></button>
+                </div>
+
+                <!-- p6: Checkbox marcado + botón Confirmar habilitado (naranja) -->
+                <div class="flow-page" data-page="6">
+                  <img src="stitched/tienda/t06-confirmar.jpg" alt="">
+                  <!-- Back arrow → p3 -->
+                  <button type="button" class="tap-zone" data-go-flow="tienda" data-page="3"
+                          style="left:0;width:12%;top:1%;height:3%;border-radius:30px"
+                          onclick="window._goFlow && window._goFlow('tienda',3)"
+                          aria-label="Volver"></button>
+                  <!-- "Confirmar" CTA naranja (PIL: y=2162-2311 ≈ 84-89.5%) → p7 modal compra OK -->
+                  <button type="button" class="tap-zone" data-go-flow="tienda" data-page="7"
+                          style="left:5%;right:5%;top:83%;height:6.5%;border-radius:50px"
+                          onclick="window._goFlow && window._goFlow('tienda',7)"
+                          aria-label="Confirmar compra"></button>
+                </div>
+
+                <!-- p7: Modal "Compra realizada" -->
+                <div class="flow-page" data-page="7">
+                  <img src="stitched/tienda/t07-modal-ok.jpg" alt="">
+                  <!-- "Entendido" CTA naranja (PIL: y=1552-1701 ≈ 60-66%) → p8 cartera -->
+                  <button type="button" class="tap-zone" data-go-flow="tienda" data-page="8"
+                          style="left:8%;right:8%;top:60%;height:6%;border-radius:30px"
+                          onclick="window._goFlow && window._goFlow('tienda',8)"
+                          aria-label="Entendido"></button>
+                </div>
+
+                <!-- p8: Cartera (Mis suscripciones + Tienda relacionada) -->
+                <div class="flow-page" data-page="8">
+                  <img src="stitched/tienda/t08-cartera.jpg" alt="">
+                  <!-- Back arrow → vuelve al origen (centro) -->
+                  <button type="button" class="tap-zone" data-go-flow="hoy"
+                          style="left:0;width:12%;top:1%;height:3%;border-radius:30px"
+                          onclick="window._goFlow && window._goFlow('hoy')"
+                          aria-label="Volver"></button>
+                </div>
+
+                <button class="flow-back" aria-label="Volver">
+                  <svg viewBox="0 0 24 24"><polyline points="15 6 9 12 15 18"/></svg>
+                </button>
+              </div>
+            </section>
+          </div>
+
+          <div class="bottomnav">
+            <button class="tg-tab active" data-go="hoy">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg>
+              <span>Hoy tienes</span>
+            </button>
+            <button class="tg-tab" data-go="centro">
+              <svg viewBox="0 0 24 24"><path d="M3 21V8l9-5 9 5v13"/><path d="M9 21v-7h6v7"/></svg>
+              <span>Mi centro</span>
+            </button>
+            <button class="tg-tab" data-go="perfil">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-7 8-7s8 3 8 7"/></svg>
+              <span>Mi perfil</span>
+            </button>
+            <button class="tg-tab" data-go="chat">
+              <svg viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-12 6.93L3 21l2.07-6A8 8 0 1 1 21 12z"/></svg>
+              <span>Mi chat</span>
+            </button>
+            <button class="tg-tab" data-go="mas">
+              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.2"/><rect x="14" y="3" width="7" height="7" rx="1.2"/><rect x="3" y="14" width="7" height="7" rx="1.2"/><path d="M17.5 14v7M14 17.5h7"/></svg>
+              <span>Más</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  var app = document.getElementById('app');
+  var screen = document.getElementById('screen');
+  var toggle = document.getElementById('toggle');
+  var sideItems = document.querySelectorAll('.nav-item[data-target]');
+  var views = document.querySelectorAll('.view');
+  var bottomTabs = document.querySelectorAll('.bottomnav .tg-tab');
+  var iphoneWrap = document.getElementById('iphoneWrap');
+
+  function lockScrollImgHeights(){
+    document.querySelectorAll('.scroll-img').forEach(function(div){
+      var img = div.querySelector('img.bg');
+      if(!img) return;
+      function apply(){
+        if(img.naturalWidth && div.offsetWidth){
+          var h = div.offsetWidth * img.naturalHeight / img.naturalWidth;
+          div.style.height = h + 'px';
+        }
+      }
+      if(img.complete) apply();
+      else img.addEventListener('load', apply);
+    });
+  }
+  lockScrollImgHeights();
+  window.addEventListener('resize', lockScrollImgHeights);
+
+  function fitIphone(){
+    var stage = iphoneWrap.parentElement;
+    // Márgenes mínimos: con el wrap ya escalado al tamaño real, el centrado del
+    // grid es exacto, así que sólo dejamos un pequeño hueco para el hamburger
+    // y para que la sombra del iPhone respire (~20px arriba/abajo).
+    var w = stage.clientWidth - 60;
+    var h = stage.clientHeight - 24;
+    var s = Math.min(w / 400, h / 850, 1.3);
+    if(s < 0.55) s = 0.55; // suelo de legibilidad
+    iphoneWrap.style.setProperty('--phone-scale', s);
+  }
+  fitIphone();
+  window.addEventListener('resize', fitIphone);
+  // Re-ajustar tras cargar imágenes/fuentes (a veces el viewport cambia un poco)
+  window.addEventListener('load', fitIphone);
+
+  // Lista de IDs de sub-flujos (cada uno tiene su <section data-id> y un .flow con .flow-pages)
+  var FLOWS = ['agenda', 'asistente', 'entrenamiento', 'dieta', 'rewards', 'pesaje', 'tienda', 'notificaciones', 'gymder', 'cartera', 'qr-acceso', 'dietas-personalizadas'];
+
+  function setFlowPage(flowId, n){
+    var pages = document.querySelectorAll('#flow-' + flowId + ' .flow-page');
+    if(!pages.length) return;
+    // No clampear por pages.length: los data-page no son contiguos (faltan 2-5,7,9
+    // en entrenamiento). Si n no existe como data-page, fallback al primero.
+    var available = Array.prototype.map.call(pages, function(p){ return +p.dataset.page; });
+    if(available.indexOf(n) === -1){
+      n = Math.min.apply(null, available);
+    }
+    pages.forEach(function(p){
+      var on = +p.dataset.page === n;
+      p.classList.toggle('active', on);
+      if(on){
+        if(p.classList.contains('scroll')) p.scrollTop = 0;
+        // Si la pagina usa CTA fijo, el scroll real está en .scroll-wrap
+        var sw = p.querySelector(':scope > .scroll-wrap');
+        if(sw) sw.scrollTop = 0;
+      }
+    });
+    document.querySelectorAll('.nav-item[data-target="' + flowId + '"]').forEach(function(b){
+      b.classList.toggle('active', +b.dataset.page === n);
+    });
+    // Auto-scroll de la sidebar al item activo + auto-expand de sus contenedores
+    var active = document.querySelector('.nav-item.active');
+    if(active){
+      // Expandir h3 ancestros colapsados
+      var subContainer = active.closest('.nav-sub');
+      if(subContainer){
+        var h3 = subContainer.previousElementSibling;
+        if(h3 && h3.classList.contains('collapsible')) h3.classList.remove('collapsed');
+      }
+      // Expandir parent colapsado (el botón Hoy tienes / Mi centro / etc.)
+      var children = active.closest('.nav-children');
+      if(children){
+        var parentBtn = children.previousElementSibling;
+        if(parentBtn && parentBtn.classList.contains('parent')) parentBtn.classList.remove('collapsed');
+      }
+      // Scroll suavemente para que el item quede visible
+      active.scrollIntoView({block:'nearest', behavior:'smooth'});
+    }
+  }
+
+  // Seguimiento del último tab no-flujo (hoy / centro / perfil / mas).
+  // Cuando dentro de un flujo se llama a "volver a hoy", redirigimos al tab origen
+  // para que el usuario regrese a donde estaba (p.ej. abrir Agenda desde Mi centro
+  // y volver con la flecha → vuelve a Mi centro, no a Hoy tienes).
+  var lastTab = 'hoy';
+
+  document.querySelectorAll('.flow-back').forEach(function(b){
+    b.addEventListener('click', function(){ showView(lastTab); });
+  });
+
+  window._goFlow = function(id, page){
+    // 'hoy' como destino se interpreta como "salir del flujo al origen".
+    if(id === 'hoy') id = lastTab;
+    showView(id, page);
+  };
+
+  // Page 17 (Crear · Añadir): swap del screenshot según el toggle pulsado.
+  // Cumulativo: tap toggle 1 → estado 1, tap 2 → estado 2, tap 3 → estado 3.
+  // Re-tap del mismo nivel → vuelve a estado 0 (deselect todo).
+  window._setAddState = function(n){
+    var img = document.getElementById('p17-img');
+    if(!img) return;
+    var current = img.dataset.state ? parseInt(img.dataset.state,10) : 0;
+    var next = (current === n) ? 0 : n;
+    img.src = 'stitched/entrenamiento/crear/c-add-' + next + '.jpg';
+    img.dataset.state = String(next);
+  };
+
+  // Dieta interactiva: toggles por comida, contador dinámico de Kcal.
+  (function initDieta(){
+    var togs = document.querySelectorAll('.dieta-tog');
+    if(!togs.length) return;
+    var counterEl = document.getElementById('dieta-kcal');
+    var states = Array.prototype.map.call(togs, function(){ return true; });
+    var kcals  = Array.prototype.map.call(togs, function(t){ return parseInt(t.dataset.kcal,10) || 0; });
+    function update(){
+      var sum = 0;
+      states.forEach(function(on,i){ if(on) sum += kcals[i]; });
+      if(counterEl) counterEl.textContent = sum;
+    }
+    togs.forEach(function(t,i){
+      t.addEventListener('click', function(e){
+        e.stopPropagation();
+        states[i] = !states[i];
+        t.classList.toggle('off', !states[i]);
+        var dim = document.querySelector('.dieta-meal-dim[data-meal="'+i+'"]');
+        if(dim) dim.classList.toggle('show', !states[i]);
+        update();
+      });
+    });
+    update();
+  })();
+
+  // Radio buttons del cuestionario: selección exclusiva por grupo (data-q)
+  document.querySelectorAll('.q-radio').forEach(function(r){
+    r.addEventListener('click', function(e){
+      e.stopPropagation();
+      var q = r.dataset.q;
+      document.querySelectorAll('.q-radio[data-q="'+q+'"]').forEach(function(o){
+        o.classList.remove('checked');
+      });
+      r.classList.add('checked');
+    });
+  });
+
+  function showView(id, page){
+    views.forEach(function(v){
+      var on = v.dataset.id === id;
+      v.classList.toggle('active', on);
+      if(on && v.scrollTop !== undefined) v.scrollTop = 0;
+    });
+    var isFlow = FLOWS.indexOf(id) !== -1;
+    // Recordar último tab no-flujo (para que "volver" desde un sub-flujo retorne al origen)
+    if(!isFlow) lastTab = id;
+    screen.classList.toggle('flow-mode', isFlow);
+    if(isFlow){
+      sideItems.forEach(function(b){ b.classList.toggle('active', false); });
+    } else {
+      sideItems.forEach(function(b){
+        b.classList.toggle('active', b.dataset.target === id && !b.dataset.page);
+      });
+    }
+    var mainId = isFlow ? 'hoy' : id;
+    bottomTabs.forEach(function(t){ t.classList.toggle('active', t.dataset.go === mainId); });
+    if(isFlow) setFlowPage(id, page || 1);
+
+    // Bottom-sheet de Entrenamiento p1: fondo dinámico según el origen (lastTab)
+    if(id === 'entrenamiento' && (page === 1 || page == null)){
+      var bg = document.querySelector('#entrenamiento-p1 .ent-p1-bg');
+      if(bg) bg.style.backgroundImage = 'url("stitched/' + lastTab + '.jpg")';
+    }
+  }
+
+  sideItems.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      // data-from fuerza el origen para que la flecha "back" del flujo regrese al
+      // tab correcto (ej. 2.4.1 fuerza lastTab='centro' aunque el usuario estuviera
+      // en hoy al pulsar la sidebar).
+      if(btn.dataset.from) lastTab = btn.dataset.from;
+      showView(btn.dataset.target, btn.dataset.page ? +btn.dataset.page : null);
+    });
+  });
+
+  document.querySelectorAll('[data-go-flow]').forEach(function(h){
+    h.addEventListener('click', function(){
+      // Aplicar el mismo redirect que _goFlow: 'hoy' significa "salir al origen"
+      // (el lastTab desde el que se entró al flujo). Sin esto, el data-go-flow
+      // override-ía el lastTab y siempre llevaría a Hoy tienes.
+      var target = h.dataset.goFlow;
+      if(target === 'hoy') target = lastTab;
+      var page = h.dataset.page ? +h.dataset.page : 1;
+      showView(target, page);
+    });
+  });
+
+  bottomTabs.forEach(function(h){
+    h.addEventListener('click', function(){
+      var target = h.dataset.go;
+      if(target === 'chat') return;
+      showView(target);
+    });
+  });
+
+  // Contraer/expandir cabeceras h2 (Home) y h3 (sub-flujos)
+  document.querySelectorAll('.nav-group h2.collapsible, .nav-group h3.collapsible').forEach(function(h){
+    h.addEventListener('click', function(){ h.classList.toggle('collapsed'); });
+  });
+
+  // Caret en "Hoy tienes": click sólo sobre el caret -> contrae/expande hijos sin navegar
+  document.querySelectorAll('.nav-item.parent .caret').forEach(function(c){
+    c.addEventListener('click', function(e){
+      e.stopPropagation();
+      var p = c.closest('.nav-item.parent');
+      if(p) p.classList.toggle('collapsed');
+    });
+  });
+
+  toggle.addEventListener('click', function(){
+    app.classList.toggle('collapsed');
+    setTimeout(fitIphone, 300);
+  });
+
+  document.addEventListener('keydown', function(e){
+    if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='b'){
+      e.preventDefault();
+      app.classList.toggle('collapsed');
+      setTimeout(fitIphone, 300);
+    }
+    if(screen.classList.contains('flow-mode') && e.key==='Escape') showView(lastTab);
+  });
+
+  iphoneWrap.addEventListener('wheel', function(e){
+    var v = document.querySelector('.view.active');
+    if(!v) return;
+    var fp = v.querySelector('.flow-page.active');
+    if(fp){
+      var sw = fp.querySelector(':scope > .scroll-wrap');
+      if(sw){ sw.scrollTop += e.deltaY; e.preventDefault(); return; }
+      if(fp.classList.contains('scroll')){ fp.scrollTop += e.deltaY; e.preventDefault(); return; }
+    }
+    v.scrollTop += e.deltaY;
+    e.preventDefault();
+  }, {passive:false});
+
+});
+</script>
+</body>
+</html>
